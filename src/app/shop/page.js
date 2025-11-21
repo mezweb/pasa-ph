@@ -1,5 +1,8 @@
 'use client';
 
+// 1. Force this page to be dynamic (skips static build errors)
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,24 +11,20 @@ import Footer from '../../components/Footer';
 import { POPULAR_PRODUCTS } from '../../lib/products';
 import { useCart } from '../../context/CartContext';
 
-// 1. This component handles the logic that needs Search Params
 function ShopContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { addToCart } = useCart();
 
-  // Get category from URL or default to 'All'
   const initialCategory = searchParams.get('category') || 'All';
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState('hot'); 
 
-  // Update state if URL changes
   useEffect(() => {
     const cat = searchParams.get('category');
     if (cat) setCategory(cat);
   }, [searchParams]);
 
-  // Filter & Sort Logic
   let displayedProducts = POPULAR_PRODUCTS.filter(p => 
     category === 'All' || p.category === category
   );
@@ -135,7 +134,6 @@ function ShopContent() {
   );
 }
 
-// 2. The Page Component simply renders the Layout + Suspense Wrapper
 export default function ShopPage() {
   return (
     <>
