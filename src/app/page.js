@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { POPULAR_PRODUCTS } from '../lib/products';
@@ -11,9 +12,23 @@ import { useCart } from '../context/CartContext';
 export default function Home() {
   const [category, setCategory] = useState('All');
   const [sellerCategory, setSellerCategory] = useState('All'); 
-  const { addToCart } = useCart();
+  
+  // Use viewMode from Context for persistence
+  const { addToCart, viewMode } = useCart(); 
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const router = useRouter(); 
+
+  // --- PERSISTENT REDIRECT LOGIC ---
+  useEffect(() => {
+    // Only redirect if the user has explicitly switched to "Seller Mode"
+    if (viewMode === 'seller') {
+        router.push('/seller-dashboard');
+    }
+  }, [viewMode, router]);
+  // ---------------------------------
+
   const slides = [
     { 
         id: 1, bg: 'linear-gradient(135deg, #111, #333)', text: 'BLACK FRIDAY SALE', sub: 'Get up to 50% OFF on Electronics from USA', color: '#fff', btnColor: '#d4af37', btnText: '#000'
@@ -40,6 +55,9 @@ export default function Home() {
   }).slice(0, 8); 
 
   const filteredSellers = sellerCategory === 'All' ? POPULAR_SELLERS : POPULAR_SELLERS.filter(s => s.countries.includes(sellerCategory));
+
+  // Prevent flash of content if redirecting
+  if (viewMode === 'seller') return null; 
 
   return (
     <>
@@ -174,4 +192,4 @@ export default function Home() {
       <Footer />
     </>
   );
-} 
+}

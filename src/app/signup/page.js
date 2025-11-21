@@ -1,0 +1,143 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { auth, db } from '../../lib/firebase'; 
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+
+export default function SignupPage() {
+  const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState('buyer'); // 'buyer' or 'seller'
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) router.push('/');
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleSignup = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if user exists, if not create with selected role
+      const docRef = doc(db, "users", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        await setDoc(docRef, {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            role: selectedRole === 'seller' ? 'Seller' : 'Buyer',
+            isSeller: selectedRole === 'seller',
+            createdAt: serverTimestamp(),
+            isProfileComplete: false
+        });
+      }
+
+      // Redirect based on role
+      if (selectedRole === 'seller') {
+        router.push('/profile'); // Go to profile setup for sellers
+      } else {
+        router.push('/'); // Buyers go to shop
+      }
+
+    } catch (error) {
+      console.error("Signup failed", error);
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <div className="container" style={{ padding: '60px 20px', maxWidth: '900px', textAlign: 'center' }}>
+        
+        <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '10px' }}>Join Pasa.ph</h1>
+        <p style={{ color: '#666', marginBottom: '50px', fontSize: '1.1rem' }}>
+            Choose how you want to get started. You can always change this later.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '40px' }}>
+            
+            {/* BUYER CARD */}
+            <div 
+                onClick={() => setSelectedRole('buyer')}
+                style={{ 
+                    border: selectedRole === 'buyer' ? '2px solid #0070f3' : '1px solid #eaeaea', 
+                    background: selectedRole === 'buyer' ? '#f0f9ff' : 'white',
+                    borderRadius: '12px', 
+                    padding: '40px', 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }}
+            >
+                <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🛍️</div>
+                <h3 style={{ marginBottom: '10px' }}>I want to Buy</h3>
+                <p style={{ color: '#666', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    Post requests for items you need from abroad or shop from verified traveler collections.
+                </p>
+            </div>
+
+            {/* SELLER CARD */}
+            <div 
+                onClick={() => setSelectedRole('seller')}
+                style={{ 
+                    border: selectedRole === 'seller' ? '2px solid #2e7d32' : '1px solid #eaeaea', 
+                    background: selectedRole === 'seller' ? '#f0fdf4' : 'white',
+                    borderRadius: '12px', 
+                    padding: '40px', 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }}
+            >
+                <div style={{ fontSize: '3rem', marginBottom: '20px' }}>✈️</div>
+                <h3 style={{ marginBottom: '10px' }}>I want to Earn</h3>
+                <p style={{ color: '#666', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    Monetize your extra luggage space. Fulfill requests and earn money while traveling.
+                </p>
+            </div>
+
+        </div>
+
+        {selectedRole === 'seller' && (
+            <div style={{ background: '#fff9c4', padding: '15px', borderRadius: '8px', marginBottom: '30px', fontSize: '0.9rem', color: '#856404', border: '1px solid #fbc02d' }}>
+                <strong>✨ Seller Tip:</strong> You can upgrade to <b>Gold</b> or <b>Diamond</b> membership after signing up to see exclusive high-value requests!
+            </div>
+        )}
+
+        <button 
+            onClick={handleSignup}
+            className="btn-primary"
+            style={{ 
+                padding: '15px 40px', 
+                fontSize: '1.1rem', 
+                width: '100%', 
+                maxWidth: '400px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                margin: '0 auto'
+            }}
+        >
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }} />
+            {selectedRole === 'seller' ? 'Continue as Seller' : 'Continue as Buyer'}
+        </button>
+
+        <p style={{ marginTop: '20px', fontSize: '0.9rem', color: '#666' }}>
+            Already have an account? <a href="/login" style={{ color: '#0070f3' }}>Log in</a>
+        </p>
+
+      </div>
+      <Footer />
+    </>
+  );
+}

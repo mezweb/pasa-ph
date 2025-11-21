@@ -9,9 +9,10 @@ import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
-  const [isSeller, setIsSeller] = useState(false); 
-  const [isSellerMode, setIsSellerMode] = useState(false); 
-  const { cart } = useCart(); 
+  const [isSellerAccount, setIsSellerAccount] = useState(false); 
+  const { cart, pasaBag, viewMode, toggleViewMode } = useCart(); 
+  const isSellerMode = viewMode === 'seller';
+
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
 
@@ -21,10 +22,10 @@ export default function Navbar() {
       if (currentUser) {
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            setIsSeller(data.isSeller);
-            setIsSellerMode(data.isSeller); 
+        if (docSnap.exists() && docSnap.data().isSeller) {
+            setIsSellerAccount(true);
+        } else {
+            setIsSellerAccount(false);
         }
       }
     });
@@ -44,12 +45,7 @@ export default function Navbar() {
     await signOut(auth);
   };
 
-  const toggleMode = () => {
-    setIsSellerMode(!isSellerMode);
-  };
-
-  // Determine Count to show
-  const itemCount = isSellerMode ? 0 : cart.length; // Bag logic handled differently or add pasaBag.length if you want
+  const itemCount = isSellerMode ? pasaBag.length : cart.length; 
 
   return (
     <nav style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 50, padding: '0.8rem 0' }}>
@@ -61,15 +57,14 @@ export default function Navbar() {
           
           <div style={{ display: 'flex', gap: '20px', fontWeight: '500', color: '#666', fontSize: '0.9rem', alignItems: 'center' }}>
             
-            {/* CONDITIONAL LINKS BASED ON MODE */}
+            {/* CONDITIONAL LINKS */}
             {isSellerMode ? (
-                // SELLER MODE LINKS
                 <>
-                    <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Products</Link>
+                    <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Marketplace</Link>
+                    <Link href="/buyers">Buyers</Link>
                     <Link href="/seller-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
                 </>
             ) : (
-                // BUYER MODE LINKS
                 <>
                     <div 
                         style={{ position: 'relative' }}
@@ -90,14 +85,16 @@ export default function Navbar() {
                     </div>
 
                     <Link href="/offers">Sellers</Link>
-                    <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                    {/* Only show Start Selling if NOT logged in or NOT a seller yet */}
+                    {(!user || !isSellerAccount) && (
+                        <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                    )}
                 </>
             )}
 
             <Link href="/how-it-works">How it Works</Link>
             <Link href="/support">Support</Link>
             
-            {/* DYNAMIC CART/BAG ICON */}
             <Link href="/cart" style={{ position: 'relative', fontSize: '1.2rem' }}>
                 {isSellerMode ? '🛍️' : '🛒'} 
                 {itemCount > 0 && (
@@ -108,7 +105,7 @@ export default function Navbar() {
             </Link>
           </div>
           
-          {/* PROFILE DROPDOWN */}
+          {/* AUTH SECTION */}
           {user ? (
             <div style={{ position: 'relative' }} onMouseEnter={() => setIsProfileHovered(true)} onMouseLeave={() => setIsProfileHovered(false)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -118,10 +115,9 @@ export default function Navbar() {
                     <div style={{ position: 'absolute', top: '100%', right: 0, background: 'white', border: '1px solid #eaeaea', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', padding: '10px 0', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
                         <Link href="/profile" style={{ padding: '10px 15px', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>My Profile</Link>
                         
-                        {/* SWITCH MODE OPTION */}
-                        {isSeller && (
+                        {isSellerAccount && (
                             <button 
-                                onClick={toggleMode}
+                                onClick={toggleViewMode}
                                 style={{ background: 'none', border: 'none', padding: '10px 15px', textAlign: 'left', cursor: 'pointer', color: '#0070f3', fontSize: '0.9rem', borderTop: '1px solid #eee', width: '100%' }}
                             >
                                 {isSellerMode ? 'Switch to Buying' : 'Switch to Selling'}
@@ -134,7 +130,14 @@ export default function Navbar() {
                 )}
             </div>
           ) : (
-            <button onClick={handleLogin} className="btn-login">Login</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleLogin} style={{ background: 'none', border: 'none', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '600' }}>
+                    Login
+                </button>
+                <Link href="/signup" className="btn-login" style={{ textDecoration: 'none' }}>
+                    Sign Up
+                </Link>
+            </div>
           )}
         </div>
       </div>
