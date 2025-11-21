@@ -1,0 +1,100 @@
+:root {
+  --primary: #0070f3;
+  --primary-hover: #005bb5;
+  --gold: #d4af37;
+  --bg: #f4f6f8;
+  --white: #ffffff;
+  --text: #111;
+  --gray: #666;
+  --light-gray: #eaeaea;
+  --border-radius: 8px;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a { text-decoration: none; color: inherit; cursor: pointer; }
+ul { list-style: none; }
+
+/* Layout Utilities */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.text-center { text-align: center; }
+.gap-10 { gap: 10px; }
+.mt-20 { margin-top: 20px; }
+
+/* Buttons */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.btn-login {
+  background: var(--text);
+  color: white;
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+
+/* Cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--light-gray);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: #ccc; }
+
+.card-img {
+  height: 180px;
+  width: 100%;
+  object-fit: cover;
+  background: #eee;
+}
+
+.card-body { padding: 15px; }
+.card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #333; }
+.card-price { font-weight: bold; color: var(--primary); font-size: 1.1rem; }
