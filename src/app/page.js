@@ -8,11 +8,12 @@ import Footer from '../components/Footer';
 import { POPULAR_PRODUCTS } from '../lib/products';
 import { POPULAR_SELLERS } from '../lib/sellers'; 
 import { useCart } from '../context/CartContext';
-import { onAuthStateChanged } from 'firebase/auth'; // Import Auth
+import { onAuthStateChanged } from 'firebase/auth'; 
 import { auth } from '../lib/firebase';
 
 export default function Home() {
   const [category, setCategory] = useState('All');
+  const [countryFilter, setCountryFilter] = useState('All'); // New Country Filter State
   const [sellerCategory, setSellerCategory] = useState('All'); 
   const { addToCart, viewMode } = useCart(); 
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +31,6 @@ export default function Home() {
 
   // --- PERSISTENT REDIRECT LOGIC ---
   useEffect(() => {
-    // Only redirect if Logged In AND in "Seller Mode"
     if (isLoggedIn && viewMode === 'seller') {
         router.push('/seller-dashboard');
     }
@@ -56,15 +56,16 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
+  // Filter Products (Category + Country + Search)
   const filteredProducts = POPULAR_PRODUCTS.filter(p => {
     const matchesCategory = category === 'All' || p.category === category;
+    const matchesCountry = countryFilter === 'All' || p.from === countryFilter; // Country Logic
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.from.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesCountry && matchesSearch;
   }).slice(0, 8); 
 
   const filteredSellers = sellerCategory === 'All' ? POPULAR_SELLERS : POPULAR_SELLERS.filter(s => s.countries.includes(sellerCategory));
 
-  // Prevent flash if redirecting
   if (isLoggedIn && viewMode === 'seller') return null;
 
   return (
@@ -107,10 +108,61 @@ export default function Home() {
 
       {/* SHOP SECTION */}
       <div id="shop" className="container" style={{ padding: '40px 20px' }}>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '20px', marginBottom: '20px', borderBottom: '1px solid #eee' }}>
-            {['All', 'Food', 'Beauty', 'Electronics'].map(cat => (
-                <button key={cat} onClick={() => { setCategory(cat); setSearchQuery(''); }} style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: category === cat ? '#0070f3' : '#f0f0f0', color: category === cat ? 'white' : '#333', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{cat}</button>
-            ))}
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
+            
+            {/* 1. CATEGORY FILTERS */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Category:</span>
+                {['All', 'Food', 'Beauty', 'Electronics'].map(cat => (
+                    <button 
+                        key={cat} 
+                        onClick={() => { setCategory(cat); setSearchQuery(''); }} 
+                        style={{ 
+                            padding: '8px 16px', 
+                            borderRadius: '20px', 
+                            border: 'none', 
+                            background: category === cat ? '#0070f3' : '#f0f0f0', 
+                            color: category === cat ? 'white' : '#333', 
+                            cursor: 'pointer', 
+                            fontWeight: 'bold', 
+                            whiteSpace: 'nowrap' 
+                        }}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </div>
+
+            {/* 2. COUNTRY FILTERS (New Section) */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Country:</span>
+                {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong'].map(cou => (
+                    <button 
+                        key={cou} 
+                        onClick={() => setCountryFilter(cou)} 
+                        style={{ 
+                            padding: '6px 14px', 
+                            borderRadius: '20px', 
+                            border: '1px solid #ddd', // Outline style for secondary filters
+                            background: countryFilter === cou ? '#333' : 'white', 
+                            color: countryFilter === cou ? 'white' : '#666', 
+                            cursor: 'pointer', 
+                            fontSize: '0.85rem',
+                            fontWeight: '500', 
+                            whiteSpace: 'nowrap' 
+                        }}
+                    >
+                        {cou === 'Philippines' ? '🇵🇭 Philippines' : cou}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {/* VIEW ALL LINK HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+             <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Trending Items</h2>
+             <Link href="/shop" style={{ fontSize: '0.9rem', color: '#0070f3', fontWeight: '600' }}>View All Products &rarr;</Link>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px', marginBottom: '60px' }}>

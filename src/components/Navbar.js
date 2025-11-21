@@ -137,11 +137,16 @@ export default function Navbar() {
                                     </div>
                                 )}
                             </div>
-                            <Link href="/offers">Sellers</Link>
+                            
+                            <Link href="/offers">Sellers</Link> {/* ADDED BACK FOR BUYER MODE */}
+                            <Link href="/how-it-works">How it Works</Link> {/* ADDED BACK FOR BUYER MODE */}
+                            
+                            {/* NEW BUYER DASHBOARD LINK */}
+                            <Link href="/buyer-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
+                            
                             {!isSellerAccount && (
                                 <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                             )}
-                            <Link href="/how-it-works">How it Works</Link>
                             <Link href="/support">Support</Link>
                         </>
                     )}
