@@ -2,31 +2,39 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; 
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { POPULAR_PRODUCTS } from '../lib/products';
 import { POPULAR_SELLERS } from '../lib/sellers'; 
 import { useCart } from '../context/CartContext';
+import { onAuthStateChanged } from 'firebase/auth'; // Import Auth
+import { auth } from '../lib/firebase';
 
 export default function Home() {
   const [category, setCategory] = useState('All');
   const [sellerCategory, setSellerCategory] = useState('All'); 
-  
-  // Use viewMode from Context for persistence
   const { addToCart, viewMode } = useCart(); 
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter(); 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // --- CHECK AUTH STATUS ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setIsLoggedIn(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- PERSISTENT REDIRECT LOGIC ---
   useEffect(() => {
-    // Only redirect if the user has explicitly switched to "Seller Mode"
-    if (viewMode === 'seller') {
+    // Only redirect if Logged In AND in "Seller Mode"
+    if (isLoggedIn && viewMode === 'seller') {
         router.push('/seller-dashboard');
     }
-  }, [viewMode, router]);
+  }, [viewMode, router, isLoggedIn]);
   // ---------------------------------
 
   const slides = [
@@ -56,8 +64,8 @@ export default function Home() {
 
   const filteredSellers = sellerCategory === 'All' ? POPULAR_SELLERS : POPULAR_SELLERS.filter(s => s.countries.includes(sellerCategory));
 
-  // Prevent flash of content if redirecting
-  if (viewMode === 'seller') return null; 
+  // Prevent flash if redirecting
+  if (isLoggedIn && viewMode === 'seller') return null;
 
   return (
     <>

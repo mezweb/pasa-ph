@@ -11,18 +11,32 @@ export default function ShopContent() {
   const router = useRouter();
   const { addToCart } = useCart();
 
+  // Get params from URL
   const initialCategory = searchParams.get('category') || 'All';
+  const initialCountry = searchParams.get('country') || 'All'; 
+
   const [category, setCategory] = useState(initialCategory);
+  const [country, setCountry] = useState(initialCountry); 
   const [sort, setSort] = useState('hot'); 
 
+  // Update state if URL changes
   useEffect(() => {
     const cat = searchParams.get('category');
+    const cou = searchParams.get('country');
     if (cat) setCategory(cat);
+    if (cou) setCountry(cou);
+    
+    if (!cou && !cat) { 
+        // Optional: Reset if neither exists
+    }
   }, [searchParams]);
 
-  let displayedProducts = POPULAR_PRODUCTS.filter(p => 
-    category === 'All' || p.category === category
-  );
+  // Filter & Sort Logic
+  let displayedProducts = POPULAR_PRODUCTS.filter(p => {
+    const matchesCategory = category === 'All' || p.category === category;
+    const matchesCountry = country === 'All' || p.from === country; // Filter by Country
+    return matchesCategory && matchesCountry;
+  });
 
   if (sort === 'hot') {
     displayedProducts.sort((a, b) => (b.isHot === a.isHot ? 0 : b.isHot ? 1 : -1) || b.requests - a.requests);
@@ -32,9 +46,16 @@ export default function ShopContent() {
     displayedProducts.sort((a, b) => b.price - a.price);
   }
 
-  const handleCategoryChange = (newCat) => {
+  const updateFilters = (newCat, newCou) => {
     setCategory(newCat);
-    router.push(`/shop?category=${newCat}`, { scroll: false });
+    setCountry(newCou);
+    
+    // Build URL params
+    const params = new URLSearchParams();
+    if (newCat !== 'All') params.set('category', newCat);
+    if (newCou !== 'All') params.set('country', newCou);
+    
+    router.push(`/shop?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -43,38 +64,83 @@ export default function ShopContent() {
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
                 
-                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }}>
-                    {['All', 'Food', 'Beauty', 'Electronics', 'Clothing', 'Other'].map(cat => (
-                        <button 
-                            key={cat}
-                            onClick={() => handleCategoryChange(cat)}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '20px',
-                                border: '1px solid #ddd',
-                                background: category === cat ? '#333' : 'white',
-                                color: category === cat ? 'white' : '#666',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '500',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {cat}
-                        </button>
-                    ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Category Filters */}
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666' }}>Category:</span>
+                        {['All', 'Food', 'Beauty', 'Electronics', 'Clothing', 'Other'].map(cat => (
+                            <button 
+                                key={cat}
+                                onClick={() => updateFilters(cat, country)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #ddd',
+                                    background: category === cat ? '#333' : 'white',
+                                    color: category === cat ? 'white' : '#666',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '500',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Country Filters */}
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                         <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666' }}>Country:</span>
+                        {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong'].map(cou => (
+                            <button 
+                                key={cou}
+                                onClick={() => updateFilters(category, cou)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #ddd',
+                                    background: country === cou ? '#0070f3' : 'white', // Blue for active country
+                                    color: country === cou ? 'white' : '#666',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '500',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {cou === 'Philippines' ? '🇵🇭 Philippines' : cou}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <select 
                     value={sort} 
                     onChange={(e) => setSort(e.target.value)}
-                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}
+                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer', height: '40px' }}
                 >
                     <option value="hot">Sort by: Popularity</option>
                     <option value="price-low">Price: Low to High</option>
                     <option value="price-high">Price: High to Low</option>
                 </select>
             </div>
+
+            {/* Active Filter Display */}
+            {(category !== 'All' || country !== 'All') && (
+                <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                    Showing results for 
+                    {category !== 'All' && <span style={{ fontWeight: 'bold', color: '#333' }}> {category}</span>}
+                    {category !== 'All' && country !== 'All' && ' from '}
+                    {country !== 'All' && <span style={{ fontWeight: 'bold', color: '#333' }}> {country === 'Philippines' ? 'Philippines (Local)' : country}</span>}
+                    <button 
+                        onClick={() => updateFilters('All', 'All')}
+                        style={{ marginLeft: '15px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.8rem' }}
+                    >
+                        Clear Filters
+                    </button>
+                </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px' }}>
                 {displayedProducts.map(product => (
@@ -120,7 +186,7 @@ export default function ShopContent() {
                 
                 {displayedProducts.length === 0 && (
                     <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '50px', color: '#888' }}>
-                        No products found in this category.
+                        No products found matching your filters.
                     </div>
                 )}
             </div>

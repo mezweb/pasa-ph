@@ -45,7 +45,7 @@ export default function Navbar() {
     await signOut(auth);
   };
 
-  const itemCount = isSellerMode ? pasaBag.length : cart.length; 
+  const itemCount = (!user || !isSellerMode) ? cart.length : pasaBag.length;
 
   return (
     <nav style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 50, padding: '0.8rem 0' }}>
@@ -57,14 +57,8 @@ export default function Navbar() {
           
           <div style={{ display: 'flex', gap: '20px', fontWeight: '500', color: '#666', fontSize: '0.9rem', alignItems: 'center' }}>
             
-            {/* CONDITIONAL LINKS */}
-            {isSellerMode ? (
-                <>
-                    <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Marketplace</Link>
-                    <Link href="/buyers">Buyers</Link>
-                    <Link href="/seller-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
-                </>
-            ) : (
+            {/* --- LOGGED OUT STATE (NEUTRAL) --- */}
+            {!user ? (
                 <>
                     <div 
                         style={{ position: 'relative' }}
@@ -75,28 +69,88 @@ export default function Navbar() {
                             Shop ▾
                         </Link>
                         {isShopHovered && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, background: 'white', border: '1px solid #eaeaea', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '150px', padding: '10px 0', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
-                                <Link href="/shop" style={{ padding: '8px 15px', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>All Items</Link>
-                                <Link href="/shop?category=Food" style={{ padding: '8px 15px', color: '#666', fontSize: '0.9rem' }}>Food</Link>
-                                <Link href="/shop?category=Beauty" style={{ padding: '8px 15px', color: '#666', fontSize: '0.9rem' }}>Beauty</Link>
-                                <Link href="/shop?category=Electronics" style={{ padding: '8px 15px', color: '#666', fontSize: '0.9rem' }}>Electronics</Link>
+                            <div style={{ position: 'absolute', top: '100%', left: 0, background: 'white', border: '1px solid #eaeaea', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', padding: '15px', display: 'flex', flexDirection: 'column', zIndex: 100, gap: '15px' }}>
+                                
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Categories</div>
+                                    <Link href="/shop" style={{ display:'block', padding: '4px 0', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>All Items</Link>
+                                    <Link href="/shop?category=Food" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Food</Link>
+                                    <Link href="/shop?category=Beauty" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Beauty</Link>
+                                    <Link href="/shop?category=Electronics" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Electronics</Link>
+                                </div>
+
+                                <div style={{ borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Shop by Country</div>
+                                    <Link href="/shop?country=Philippines" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇵🇭 Philippines (Local)</Link>
+                                    <Link href="/shop?country=Japan" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇯🇵 Japan</Link>
+                                    <Link href="/shop?country=USA" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇺🇸 USA</Link>
+                                    <Link href="/shop?country=South Korea" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇰🇷 Korea</Link>
+                                </div>
+
                             </div>
                         )}
                     </div>
-
                     <Link href="/offers">Sellers</Link>
-                    {/* Only show Start Selling if NOT logged in or NOT a seller yet */}
-                    {(!user || !isSellerAccount) && (
-                        <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                    <Link href="/how-it-works">How it Works</Link>
+                    <Link href="/support">Support</Link>
+                </>
+            ) : (
+                /* --- LOGGED IN STATE (ROLE BASED) --- */
+                <>
+                    {isSellerMode ? (
+                        // Seller Mode
+                        <>
+                            <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Marketplace</Link>
+                            <Link href="/buyers">Buyers</Link>
+                            <Link href="/seller-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
+                        </>
+                    ) : (
+                        // Buyer Mode
+                        <>
+                             <div 
+                                style={{ position: 'relative' }}
+                                onMouseEnter={() => setIsShopHovered(true)}
+                                onMouseLeave={() => setIsShopHovered(false)}
+                            >
+                                <Link href="/shop" style={{ padding: '10px 0', display: 'block' }}>
+                                    Shop ▾
+                                </Link>
+                                {isShopHovered && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, background: 'white', border: '1px solid #eaeaea', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', padding: '15px', display: 'flex', flexDirection: 'column', zIndex: 100, gap: '15px' }}>
+                                
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Categories</div>
+                                            <Link href="/shop" style={{ display:'block', padding: '4px 0', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>All Items</Link>
+                                            <Link href="/shop?category=Food" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Food</Link>
+                                            <Link href="/shop?category=Beauty" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Beauty</Link>
+                                            <Link href="/shop?category=Electronics" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Electronics</Link>
+                                        </div>
+
+                                        <div style={{ borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Shop by Country</div>
+                                            <Link href="/shop?country=Philippines" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇵🇭 Philippines (Local)</Link>
+                                            <Link href="/shop?country=Japan" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇯🇵 Japan</Link>
+                                            <Link href="/shop?country=USA" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇺🇸 USA</Link>
+                                            <Link href="/shop?country=South Korea" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇰🇷 Korea</Link>
+                                        </div>
+
+                                    </div>
+                                )}
+                            </div>
+                            <Link href="/offers">Sellers</Link>
+                            {!isSellerAccount && (
+                                <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                            )}
+                            <Link href="/how-it-works">How it Works</Link>
+                            <Link href="/support">Support</Link>
+                        </>
                     )}
                 </>
             )}
-
-            <Link href="/how-it-works">How it Works</Link>
-            <Link href="/support">Support</Link>
             
+            {/* CART ICON */}
             <Link href="/cart" style={{ position: 'relative', fontSize: '1.2rem' }}>
-                {isSellerMode ? '🛍️' : '🛒'} 
+                {isSellerMode && user ? '🛍️' : '🛒'} 
                 {itemCount > 0 && (
                     <span style={{ position: 'absolute', top: '-5px', right: '-10px', background: 'red', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>
                         {itemCount}
@@ -105,7 +159,7 @@ export default function Navbar() {
             </Link>
           </div>
           
-          {/* AUTH SECTION */}
+          {/* AUTH BUTTONS */}
           {user ? (
             <div style={{ position: 'relative' }} onMouseEnter={() => setIsProfileHovered(true)} onMouseLeave={() => setIsProfileHovered(false)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>

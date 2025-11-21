@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const [facebook, setFacebook] = useState('');
   const [tiktokVideoId, setTiktokVideoId] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
-  const [focusCountry, setFocusCountry] = useState('Japan'); // NEW FIELD
+  const [focusCountry, setFocusCountry] = useState('Japan'); // Load focus country
 
   // Item Form State
   const [myItems, setMyItems] = useState([]);
@@ -61,7 +61,7 @@ export default function ProfilePage() {
         setFacebook(data.socials?.facebook || '');
         setTiktokVideoId(data.socials?.tiktokVideoId || '');
         setBannerUrl(data.bannerUrl || '');
-        setFocusCountry(data.focusCountry || 'Japan'); // Load focus country
+        setFocusCountry(data.focusCountry || 'Japan'); 
 
         if (data.isSeller) {
             const itemsRef = collection(db, "users", currentUser.uid, "items");
@@ -192,6 +192,7 @@ export default function ProfilePage() {
                             style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }}
                             value={focusCountry} onChange={(e) => setFocusCountry(e.target.value)}
                         >
+                            <option value="Philippines">Philippines (Local)</option> {/* ADDED */}
                             <option value="Japan">Japan</option>
                             <option value="USA">USA</option>
                             <option value="South Korea">South Korea</option>
