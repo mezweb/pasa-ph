@@ -4,9 +4,23 @@ import { useCart } from '../../context/CartContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
+import { auth, db } from '../../lib/firebase'; 
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart, pasaBag, removeFromBag, clearBag, viewMode } = useCart();
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
   
   const isSellerMode = viewMode === 'seller';
   const currentList = isSellerMode ? pasaBag : cart;
@@ -15,13 +29,48 @@ export default function CartPage() {
 
   const total = currentList.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (!user) {
+        alert("Please login to checkout.");
+        router.push('/login');
+        return;
+    }
+
     if (isSellerMode) {
         alert("Items confirmed for fulfillment! Buyers will be notified.");
+        clearFunc();
     } else {
-        alert("Proceeding to Payment Gateway (Mockup)");
+        if(!confirm(`Confirm order for ₱${total}? (Simulated Payment)`)) return;
+
+        try {
+            const promises = currentList.map(item => {
+                return addDoc(collection(db, "requests"), {
+                    title: item.title,
+                    category: item.category || 'General',
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image || item.images?.[0] || '',
+                    from: item.from || 'General',
+                    to: 'Manila',
+                    userId: user.uid,
+                    userName: user.displayName,
+                    userPhoto: user.photoURL,
+                    status: 'Shipped', // MOCK: Set to Shipped so tracking UI is visible
+                    createdAt: serverTimestamp()
+                });
+            });
+
+            await Promise.all(promises);
+            
+            alert("Order placed successfully! Check your Dashboard.");
+            clearFunc();
+            router.push('/buyer-dashboard');
+
+        } catch (error) {
+            console.error("Error placing order:", error);
+            alert("Failed to place order. Please try again.");
+        }
     }
-    clearFunc();
   };
 
   return (

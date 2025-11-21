@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
@@ -22,9 +22,6 @@ export default function SellerDashboard() {
         return;
       }
       setUser(currentUser);
-      
-      // In a real app, we would fetch the user's tier from their profile in Firestore
-      // For this demo, we keep it as local state so you can toggle it easily
     });
 
     // Fetch ALL pending requests
@@ -42,14 +39,40 @@ export default function SellerDashboard() {
   }, [router]);
 
   // Mock logic to separate "High Value" requests
-  // In real life, this could be based on price > ₱5000 or 'isUrgent' flag
   const highValueRequests = requests.filter(req => req.price >= 2000);
   const standardRequests = requests.filter(req => req.price < 2000);
 
-  const handleAcceptRequest = (id) => {
-    alert(`You have accepted request #${id.slice(0,5)}! The buyer will be notified.`);
-    // In real app: updateDoc(doc(db, "requests", id), { status: 'accepted', sellerId: user.uid });
+  // --- ACCEPT LOGIC (Updates Firestore Status) ---
+  const handleAcceptRequest = async (id, title) => {
+    if (!confirm(`Confirm acceptance of request: ${title}?`)) return;
+
+    try {
+        await updateDoc(doc(db, "requests", id), {
+            status: 'Accepted',
+            sellerId: user.uid,
+            acceptedAt: serverTimestamp()
+        });
+        alert(`Request ${title} ACCEPTED!`);
+    } catch (error) {
+        console.error("Error accepting request:", error);
+        alert("Failed to accept request.");
+    }
   };
+  
+  // --- Conditional Style Helper ---
+  const getRequestStyle = (status) => {
+      if (status === 'Accepted') {
+          return { border: '2px solid #2e7d32', backgroundColor: '#f0fdf4', opacity: 0.8 };
+      }
+      return { border: '1px solid #eaeaea', backgroundColor: 'white' };
+  };
+
+  const getButtonText = (status) => {
+      if (status === 'Accepted') return 'Accepted';
+      if (status === 'Shipped') return 'In Progress';
+      return 'Accept';
+  };
+
 
   return (
     <>
@@ -107,13 +130,34 @@ export default function SellerDashboard() {
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                     {highValueRequests.map(req => (
-                        <div key={req.id} style={{ background: '#fff', border: '2px solid #d4af37', borderRadius: '12px', padding: '20px', position: 'relative', boxShadow: '0 4px 12px rgba(212, 175, 55, 0.1)' }}>
+                        <div key={req.id} 
+                            style={{ 
+                                ...getRequestStyle(req.status), 
+                                borderRadius: '12px', padding: '20px', position: 'relative', 
+                                boxShadow: req.status === 'Accepted' ? '0 0 10px rgba(46, 125, 50, 0.5)' : '0 4px 12px rgba(212, 175, 55, 0.1)' 
+                            }}
+                        >
                             <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#d4af37', color: 'white', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>EXCLUSIVE</div>
                             <h4 style={{ margin: '0 0 5px' }}>{req.title}</h4>
                             <p style={{ color: '#666', fontSize: '0.9rem', margin: '0 0 15px' }}>{req.from} &rarr; {req.to}</p>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#d4af37' }}>₱{req.price}</span>
-                                <button onClick={() => handleAcceptRequest(req.id)} style={{ background: '#d4af37', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Accept</button>
+                                <button 
+                                    onClick={() => handleAcceptRequest(req.id, req.title)} 
+                                    disabled={req.status === 'Accepted'}
+                                    style={{ 
+                                        background: req.status === 'Accepted' ? '#2e7d32' : '#d4af37', 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        padding: '8px 16px', 
+                                        borderRadius: '6px', 
+                                        cursor: 'pointer', 
+                                        fontWeight: 'bold',
+                                        transition: '0.2s'
+                                    }}
+                                >
+                                    {getButtonText(req.status)}
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -127,12 +171,33 @@ export default function SellerDashboard() {
             <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>Standard Requests</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                 {standardRequests.map(req => (
-                    <div key={req.id} style={{ background: 'white', border: '1px solid #eaeaea', borderRadius: '12px', padding: '20px' }}>
+                    <div key={req.id} 
+                         style={{ 
+                            ...getRequestStyle(req.status),
+                            borderRadius: '12px', padding: '20px', 
+                            boxShadow: req.status === 'Accepted' ? '0 0 10px rgba(46, 125, 50, 0.5)' : '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                    >
                         <h4 style={{ margin: '0 0 5px' }}>{req.title}</h4>
                         <p style={{ color: '#666', fontSize: '0.9rem', margin: '0 0 15px' }}>{req.from} &rarr; {req.to}</p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#333' }}>₱{req.price}</span>
-                            <button onClick={() => handleAcceptRequest(req.id)} style={{ background: '#fff', border: '1px solid #0070f3', color: '#0070f3', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Accept</button>
+                            <button 
+                                onClick={() => handleAcceptRequest(req.id, req.title)} 
+                                disabled={req.status === 'Accepted'}
+                                style={{ 
+                                    background: req.status === 'Accepted' ? '#2e7d32' : 'white', 
+                                    border: req.status === 'Accepted' ? 'none' : '1px solid #0070f3',
+                                    color: req.status === 'Accepted' ? 'white' : '#0070f3', 
+                                    padding: '8px 16px', 
+                                    borderRadius: '6px', 
+                                    cursor: 'pointer', 
+                                    fontWeight: 'bold',
+                                    transition: '0.2s'
+                                }}
+                            >
+                                {getButtonText(req.status)}
+                            </button>
                         </div>
                     </div>
                 ))}

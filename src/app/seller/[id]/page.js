@@ -1,10 +1,13 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
-import Footer from '../../../components/Footer';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation'; // Added useRouter
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase'; // Correct path to lib
+import Navbar from '../../../components/Navbar'; // Corrected path
+import Footer from '../../../components/Footer'; // Corrected path
 import Link from 'next/link';
-import { POPULAR_PRODUCTS } from '../../../lib/products'; 
+import { POPULAR_PRODUCTS } from '../../../lib/products'; // Import products to find IDs
 
 // --- MOCK DATA GENERATOR ---
 const getSellerProfile = (id) => {
@@ -48,7 +51,6 @@ export default function SellerProfilePage() {
   const sellerName = decodeURIComponent(id);
   const seller = getSellerProfile(sellerName);
 
-  // Helper to find product ID by title
   const getProductLink = (title) => {
     const found = POPULAR_PRODUCTS.find(p => p.title === title);
     return found ? `/product/${found.id}` : '#'; 
@@ -122,7 +124,6 @@ export default function SellerProfilePage() {
                 <h2 style={{ fontSize: '1.5rem' }}>Top Items & Recent Activity</h2>
                 <button 
                     className="btn-primary" 
-                    // UPDATED: Redirect to new Request Item page
                     onClick={() => router.push(`/request-item/${seller.name}`)}
                     style={{ fontSize: '0.9rem' }}
                 >

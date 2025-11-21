@@ -4,13 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '../../lib/firebase'; 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth'; // Import createUserWithEmailAndPassword
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import Link from 'next/link';
 
 export default function SignupPage() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState('buyer'); // 'buyer' or 'seller'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -20,38 +25,63 @@ export default function SignupPage() {
     return () => unsubscribe();
   }, [router]);
 
-  const handleSignup = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      // Check if user exists, if not create with selected role
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
+  const saveUserToFirestore = async (user, name) => {
+    const docRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(docRef);
 
-      if (!docSnap.exists()) {
+    if (!docSnap.exists()) {
         await setDoc(docRef, {
             uid: user.uid,
-            displayName: user.displayName,
+            displayName: name || user.email.split('@')[0],
             email: user.email,
-            photoURL: user.photoURL,
+            photoURL: user.photoURL || 'https://placehold.co/32x32?text=U',
             role: selectedRole === 'seller' ? 'Seller' : 'Buyer',
             isSeller: selectedRole === 'seller',
             createdAt: serverTimestamp(),
             isProfileComplete: false
         });
-      }
+    }
 
-      // Redirect based on role
-      if (selectedRole === 'seller') {
-        router.push('/profile'); // Go to profile setup for sellers
-      } else {
-        router.push('/'); // Buyers go to shop
-      }
+    if (selectedRole === 'seller') {
+        router.push('/profile');
+    } else {
+        router.push('/');
+    }
+  };
+
+
+  const handleEmailSignup = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    
+    if (password.length < 6) {
+        alert("Password must be at least 6 characters.");
+        setIsProcessing(false);
+        return;
+    }
+
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await saveUserToFirestore(user, displayName);
 
     } catch (error) {
-      console.error("Signup failed", error);
+        console.error("Email Signup failed:", error);
+        alert(error.message);
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await saveUserToFirestore(result.user, result.user.displayName);
+
+    } catch (error) {
+      console.error("Google Signup failed:", error);
+      alert(error.message);
     }
   };
 
@@ -112,9 +142,43 @@ export default function SignupPage() {
                 <strong>✨ Seller Tip:</strong> You can upgrade to <b>Gold</b> or <b>Diamond</b> membership after signing up to see exclusive high-value requests!
             </div>
         )}
+        
+        {/* EMAIL/PASSWORD SIGNUP FORM */}
+        <form onSubmit={handleEmailSignup} style={{ margin: '0 auto 30px', maxWidth: '400px', textAlign: 'left', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff' }}>
+            <h3 style={{ marginBottom: '15px', fontSize: '1.2rem', textAlign: 'center' }}>Sign Up with Email</h3>
+
+            <input 
+                type="text" placeholder="Full Name" required
+                value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                style={{ width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '8px' }}
+            />
+            <input 
+                type="email" placeholder="Email Address" required
+                value={email} onChange={(e) => setEmail(e.target.value)}
+                style={{ width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '8px' }}
+            />
+            <input 
+                type="password" placeholder="Password (min 6 characters)" required
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #ccc', borderRadius: '8px' }}
+            />
+            <button 
+                type="submit" 
+                className="btn-primary"
+                disabled={isProcessing || !email || !password || !displayName}
+                style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+            >
+                {isProcessing ? 'Creating Account...' : 'Create Account'}
+            </button>
+        </form>
+
+        <div style={{ margin: '0 auto 20px', maxWidth: '400px', textAlign: 'center', borderBottom: '1px solid #eee', position: 'relative', height: '20px' }}>
+            <span style={{ position: 'absolute', top: '0', left: '50%', transform: 'translate(-50%, -50%)', background: '#f8f8f8', padding: '0 10px', fontSize: '0.8rem', color: '#666' }}>OR</span>
+        </div>
+
 
         <button 
-            onClick={handleSignup}
+            onClick={handleGoogleSignup}
             className="btn-primary"
             style={{ 
                 padding: '15px 40px', 
@@ -129,7 +193,7 @@ export default function SignupPage() {
             }}
         >
             <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }} />
-            {selectedRole === 'seller' ? 'Continue as Seller' : 'Continue as Buyer'}
+            Continue with Google
         </button>
 
         <p style={{ marginTop: '20px', fontSize: '0.9rem', color: '#666' }}>

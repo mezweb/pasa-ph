@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
-import Navbar from '../../../components/Navbar';
-import Footer from '../../../components/Footer';
+import { db } from '../../../lib/firebase'; // Corrected path
+import Navbar from '../../../components/Navbar'; // Corrected path
+import Footer from '../../../components/Footer'; // Corrected path
 import Link from 'next/link';
 
 export default function RequestDetailPage() {
@@ -15,7 +15,7 @@ export default function RequestDetailPage() {
   const [item, setItem] = useState(null);
   const [requester, setRequester] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeImage, setActiveImage] = useState(0); 
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -45,7 +45,17 @@ export default function RequestDetailPage() {
   if (loading) return <div style={{ padding: '100px', textAlign: 'center', color: '#888' }}>Loading product details...</div>;
   if (!item) return <div style={{ padding: '100px', textAlign: 'center' }}>Item not found.</div>;
 
-  const images = [
+  const getFlag = (country) => {
+    if (country === 'Japan') return '🇯🇵';
+    if (country === 'USA') return '🇺🇸';
+    if (country === 'South Korea') return '🇰🇷';
+    if (country === 'Singapore') return '🇸🇬';
+    if (country === 'Hong Kong') return '🇭🇰';
+    if (country === 'Indonesia') return '🇮🇩';
+    return '🇵🇭';
+  };
+
+  const productImages = [
     item.image || `https://placehold.co/600x600/e3f2fd/0070f3?text=${encodeURIComponent(item.title)}`,
     `https://placehold.co/600x600/f0f0f0/999?text=Side+View`,
     `https://placehold.co/600x600/f0f0f0/999?text=Back+View`
@@ -58,7 +68,7 @@ export default function RequestDetailPage() {
         <div className="container" style={{ padding: '40px 20px' }}>
             
             <div style={{ marginBottom: '20px', fontSize: '0.9rem', color: '#666' }}>
-                <Link href="/" style={{ textDecoration: 'none', color: '#999' }}>Home</Link> 
+                <Link href="/" style={{ textDecoration: 'none', color: '#999' }}>Shop</Link> 
                 <span style={{ margin: '0 10px' }}>/</span> 
                 <Link href="/requests" style={{ textDecoration: 'none', color: '#999' }}>Requests</Link> 
                 <span style={{ margin: '0 10px' }}>/</span> 
@@ -67,6 +77,7 @@ export default function RequestDetailPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px' }}>
                 
+                {/* LEFT: Image Section (Gallery) */}
                 <div>
                     <div style={{ 
                         width: '100%', 
@@ -78,41 +89,48 @@ export default function RequestDetailPage() {
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                         marginBottom: '15px'
                     }}>
                         <img 
-                            src={images[activeImage]} 
-                            alt="Main" 
+                            src={productImages[activeImageIndex]} 
+                            alt={item.title} 
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     </div>
-                    
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        {images.map((img, idx) => (
-                            <div 
-                                key={idx}
-                                onClick={() => setActiveImage(idx)}
-                                style={{ 
-                                    width: '80px', 
-                                    height: '80px', 
-                                    borderRadius: '8px', 
-                                    border: activeImage === idx ? '2px solid #0070f3' : '1px solid #ddd',
-                                    overflow: 'hidden',
-                                    cursor: 'pointer',
-                                    opacity: activeImage === idx ? 1 : 0.6
-                                }}
-                            >
-                                <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                        ))}
-                    </div>
+
+                    {productImages.length > 1 && (
+                        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                            {productImages.map((img, idx) => (
+                                <div 
+                                    key={idx}
+                                    onClick={() => setActiveImageIndex(idx)}
+                                    style={{
+                                        width: '80px',
+                                        height: '80px',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        border: activeImageIndex === idx ? '2px solid #0070f3' : '1px solid #ddd',
+                                        cursor: 'pointer',
+                                        opacity: activeImageIndex === idx ? 1 : 0.6,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <img src={img} alt={`Thumbnail ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
+                {/* RIGHT: DETAILS */}
                 <div>
                     <div style={{ background: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #eaeaea', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
                         
-                        <div style={{ marginBottom: '5px', textTransform: 'uppercase', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', letterSpacing: '1px' }}>
-                            {item.category || "General Item"}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: '#888', fontWeight: 'bold', letterSpacing: '1px' }}>
+                                {item.category || "General Item"}
+                            </span>
                         </div>
                         
                         <h1 style={{ fontSize: '2.2rem', fontWeight: '800', lineHeight: '1.2', marginBottom: '15px', color: '#111' }}>
@@ -171,7 +189,7 @@ export default function RequestDetailPage() {
                             Contact Support to Offer
                         </button>
                         <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#999', marginTop: '15px' }}>
-                            Secure payment via Pasa.ph Escrow.
+                            Secure payment via Pasa.ph Escrow. 100% Authentic Guarantee.
                         </p>
 
                     </div>

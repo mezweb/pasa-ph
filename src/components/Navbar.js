@@ -9,9 +9,9 @@ import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
-  const [isSellerAccount, setIsSellerAccount] = useState(false); 
+  const [isSellerAccount, setIsSellerAccount] = useState(false); // Account HAS seller status in Firestore
   const { cart, pasaBag, viewMode, toggleViewMode } = useCart(); 
-  const isSellerMode = viewMode === 'seller';
+  const isSellerMode = viewMode === 'seller'; // Current active view mode
 
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
@@ -22,11 +22,14 @@ export default function Navbar() {
       if (currentUser) {
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
+        // Check if user is marked as a seller in the database
         if (docSnap.exists() && docSnap.data().isSeller) {
             setIsSellerAccount(true);
         } else {
             setIsSellerAccount(false);
         }
+      } else {
+        setIsSellerAccount(false);
       }
     });
     return () => unsubscribe();
@@ -138,13 +141,14 @@ export default function Navbar() {
                                 )}
                             </div>
                             
-                            <Link href="/offers">Sellers</Link> {/* ADDED BACK FOR BUYER MODE */}
-                            <Link href="/how-it-works">How it Works</Link> {/* ADDED BACK FOR BUYER MODE */}
+                            <Link href="/offers">Sellers</Link>
+                            <Link href="/how-it-works">How it Works</Link>
                             
                             {/* NEW BUYER DASHBOARD LINK */}
                             <Link href="/buyer-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
                             
-                            {!isSellerAccount && (
+                            {/* Start Selling link only visible if account exists but IS NOT a seller */}
+                            {!isSellerAccount && user && (
                                 <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                             )}
                             <Link href="/support">Support</Link>

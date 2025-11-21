@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
-import Modal from '../../components/Modal'; // Reuse your existing Modal
+import Modal from '../../components/Modal';
 
 export default function BuyerDashboard() {
   const router = useRouter();
@@ -51,20 +51,75 @@ export default function BuyerDashboard() {
     setIsTrackingOpen(true);
   };
 
-  // Helper to generate mock timeline events based on order date
+  // --- CONFIRM RECEIPT LOGIC ---
+  const handleConfirmReceipt = async (orderId) => {
+    if(!confirm("Are you sure you have received this item? This will release payment to the seller.")) return;
+
+    try {
+        await updateDoc(doc(db, "requests", orderId), {
+            status: 'Received', // Changed to 'Received' to match new flow
+            receivedAt: serverTimestamp()
+        });
+        alert("Item received! Seller has been notified.");
+        setIsTrackingOpen(false);
+    } catch (error) {
+        console.error("Error confirming receipt:", error);
+        alert("Failed to update status.");
+    }
+  };
+
+  // SIMPLIFIED TIMELINE
   const getTimelineEvents = (order) => {
     const date = order.createdAt ? new Date(order.createdAt.seconds * 1000) : new Date();
     const options = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     
-    // Simulate a timeline
+    // Check status progression
+    const isConfirmed = ['Confirmed', 'Shipped', 'Received', 'Completed'].includes(order.status);
+    const isShipped = ['Shipped', 'Received', 'Completed'].includes(order.status);
+    const isReceived = ['Received', 'Completed'].includes(order.status);
+
     return [
-      { status: 'Order Placed', date: date.toLocaleString('en-US', options), active: true },
-      { status: 'Seller has confirmed request', date: new Date(date.getTime() + 3600000).toLocaleString('en-US', options), active: true },
-      { status: 'Parcel picked up by logistics', date: new Date(date.getTime() + 86400000).toLocaleString('en-US', options), active: true },
-      { status: 'Arrived at Sorting Facility SOC 6', date: new Date(date.getTime() + 172800000).toLocaleString('en-US', options), active: true },
-      { status: 'Departed to Delivery Hub', date: 'Estimated', active: false },
-      { status: 'Out for Delivery', date: 'Estimated', active: false },
+      { 
+        status: 'Order Placed', 
+        date: date.toLocaleString('en-US', options), 
+        active: true, 
+        icon: '📝' 
+      },
+      { 
+        status: 'Seller Confirmed Request', 
+        date: isConfirmed ? 'Confirmed' : 'Pending...', 
+        active: isConfirmed, 
+        icon: '✅' 
+      },
+      { 
+        status: 'Seller has Shipped Item', 
+        date: isShipped ? 'Shipped' : 'Pending...', 
+        active: isShipped, 
+        icon: '🚚',
+        // Show Tracking Number if Shipped
+        details: isShipped ? (
+             <div style={{ marginTop: '5px', padding: '10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', display: 'inline-block' }}>
+                <span style={{ fontSize: '0.8rem', color: '#0070f3', marginRight: '5px', fontWeight: 'bold' }}>TRACKING #:</span>
+                <strong style={{ fontSize: '0.9rem', color: '#333', fontFamily: 'monospace' }}>TRK-{order.id.slice(0, 8).toUpperCase()}</strong>
+            </div>
+        ) : null
+      },
+      { 
+        status: 'Item Received', 
+        date: isReceived ? 'Completed' : 'Pending Confirmation', 
+        active: isReceived, 
+        icon: '🏠',
+        // Only show button if Shipped but NOT yet Received
+        isAction: !isReceived && isShipped 
+      } 
     ];
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'Received' || status === 'Completed') return '#2e7d32'; 
+    if (status === 'Shipped') return '#0070f3'; 
+    if (status === 'Confirmed') return '#f09433';
+    return '#666'; 
   };
 
   if (loading) return <div style={{ padding: '100px', textAlign: 'center' }}>Loading dashboard...</div>;
@@ -88,8 +143,10 @@ export default function BuyerDashboard() {
                     <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Orders</div>
                 </div>
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#2e7d32', marginBottom: '5px' }}>0</div>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>To Receive</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#2e7d32', marginBottom: '5px' }}>
+                        {myOrders.filter(o => o.status === 'Received' || o.status === 'Completed').length}
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.9rem' }}>Completed Deliveries</div>
                 </div>
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                     <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#f97316', marginBottom: '5px' }}>₱{myOrders.reduce((acc, item) => acc + (item.price || 0), 0).toLocaleString()}</div>
@@ -129,11 +186,11 @@ export default function BuyerDashboard() {
                                     borderRadius: '20px', 
                                     fontSize: '0.8rem', 
                                     fontWeight: 'bold',
-                                    background: '#fff3e0',
-                                    color: '#f57c00',
-                                    border: '1px solid #ffe0b2'
+                                    background: getStatusColor(order.status || 'Pending') + '20', 
+                                    color: getStatusColor(order.status || 'Pending'),
+                                    border: `1px solid ${getStatusColor(order.status || 'Pending')}40`
                                 }}>
-                                    {order.status || 'Processing'}
+                                    {order.status || 'Awaiting Seller'}
                                 </div>
                                 
                                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -143,9 +200,6 @@ export default function BuyerDashboard() {
                                     >
                                         Track Package
                                     </button>
-                                    <Link href={`/requests/${order.id}`} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #0070f3', background: 'white', color: '#0070f3', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '500' }}>
-                                        View Details
-                                    </Link>
                                 </div>
                             </div>
 
@@ -157,17 +211,17 @@ export default function BuyerDashboard() {
       </div>
       <Footer />
 
-      {/* TRACKING MODAL */}
-      <Modal isOpen={isTrackingOpen} onClose={() => setIsTrackingOpen(false)} title="Shipment Status">
+      {/* SIMPLIFIED TRACKING MODAL */}
+      <Modal isOpen={isTrackingOpen} onClose={() => setIsTrackingOpen(false)} title="Order Status">
         {selectedOrder && (
             <div style={{ padding: '0 10px' }}>
                 
                 {/* Guaranteed Delivery Banner */}
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '8px', marginBottom: '25px', display: 'flex', gap: '10px', alignItems: 'start' }}>
-                    <span style={{ fontSize: '1.2rem' }}>⏱️</span>
+                    <span style={{ fontSize: '1.2rem' }}>🛡️</span>
                     <div>
-                        <div style={{ fontWeight: 'bold', color: '#15803d', fontSize: '0.9rem' }}>Guaranteed On-Time Delivery</div>
-                        <div style={{ fontSize: '0.8rem', color: '#166534' }}>Get a ₱50 voucher if no delivery was attempted by tomorrow.</div>
+                        <div style={{ fontWeight: 'bold', color: '#15803d', fontSize: '0.9rem' }}>Payment Protection Active</div>
+                        <div style={{ fontSize: '0.8rem', color: '#166534' }}>Your payment is held in escrow until you confirm receipt.</div>
                     </div>
                 </div>
 
@@ -177,7 +231,6 @@ export default function BuyerDashboard() {
                     <div>
                         <h4 style={{ margin: '0 0 5px' }}>{selectedOrder.title}</h4>
                         <div style={{ fontSize: '0.85rem', color: '#666' }}>ID: {selectedOrder.id.slice(0, 12).toUpperCase()}</div>
-                        <div style={{ fontSize: '0.85rem', color: '#666' }}>Logistics: <strong>SPX Express</strong></div>
                     </div>
                 </div>
 
@@ -204,6 +257,23 @@ export default function BuyerDashboard() {
                             <div style={{ fontSize: '0.8rem', color: '#999', marginTop: '4px' }}>
                                 {event.date}
                             </div>
+                            {event.details}
+                            
+                            {/* Confirm Receipt Button inside timeline */}
+                            {event.isAction && (
+                                <div style={{ marginTop: '15px' }}>
+                                    <button 
+                                        onClick={() => handleConfirmReceipt(selectedOrder.id)}
+                                        className="btn-primary"
+                                        style={{ fontSize: '0.85rem', padding: '10px 20px', width: '100%' }}
+                                    >
+                                        Confirm Item Received
+                                    </button>
+                                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '8px', textAlign:'center' }}>
+                                        Only click this if you have physically received the item.
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
