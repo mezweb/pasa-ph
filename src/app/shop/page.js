@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
@@ -8,7 +8,8 @@ import Footer from '../../components/Footer';
 import { POPULAR_PRODUCTS } from '../../lib/products';
 import { useCart } from '../../context/CartContext';
 
-export default function ShopPage() {
+// 1. This component handles the logic that needs Search Params
+function ShopContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { addToCart } = useCart();
@@ -16,7 +17,7 @@ export default function ShopPage() {
   // Get category from URL or default to 'All'
   const initialCategory = searchParams.get('category') || 'All';
   const [category, setCategory] = useState(initialCategory);
-  const [sort, setSort] = useState('hot'); // 'hot', 'price-low', 'price-high'
+  const [sort, setSort] = useState('hot'); 
 
   // Update state if URL changes
   useEffect(() => {
@@ -30,7 +31,6 @@ export default function ShopPage() {
   );
 
   if (sort === 'hot') {
-    // Sort by Hot first, then by request count
     displayedProducts.sort((a, b) => (b.isHot === a.isHot ? 0 : b.isHot ? 1 : -1) || b.requests - a.requests);
   } else if (sort === 'price-low') {
     displayedProducts.sort((a, b) => a.price - b.price);
@@ -38,31 +38,17 @@ export default function ShopPage() {
     displayedProducts.sort((a, b) => b.price - a.price);
   }
 
-  // Update URL without reloading when category changes
   const handleCategoryChange = (newCat) => {
     setCategory(newCat);
     router.push(`/shop?category=${newCat}`, { scroll: false });
   };
 
   return (
-    <>
-      <Navbar />
-      
-      {/* Header */}
-      <div style={{ background: '#f8f9fa', padding: '40px 20px', borderBottom: '1px solid #eaeaea' }}>
-        <div className="container" style={{ maxWidth: '1000px' }}>
-            <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>Shop PasaBuy</h1>
-            <p style={{ color: '#666' }}>Browse unique items from around the world, verified by travelers.</p>
-        </div>
-      </div>
-
-      <div className="container" style={{ padding: '40px 20px', minHeight: '60vh' }}>
+    <div className="container" style={{ padding: '40px 20px', minHeight: '60vh' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
             
-            {/* Controls Bar */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
                 
-                {/* Categories */}
                 <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }}>
                     {['All', 'Food', 'Beauty', 'Electronics', 'Clothing', 'Other'].map(cat => (
                         <button 
@@ -85,7 +71,6 @@ export default function ShopPage() {
                     ))}
                 </div>
 
-                {/* Sort */}
                 <select 
                     value={sort} 
                     onChange={(e) => setSort(e.target.value)}
@@ -97,7 +82,6 @@ export default function ShopPage() {
                 </select>
             </div>
 
-            {/* Product Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px' }}>
                 {displayedProducts.map(product => (
                     <Link href={`/product/${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -147,7 +131,27 @@ export default function ShopPage() {
                 )}
             </div>
         </div>
+    </div>
+  );
+}
+
+// 2. The Page Component simply renders the Layout + Suspense Wrapper
+export default function ShopPage() {
+  return (
+    <>
+      <Navbar />
+      
+      <div style={{ background: '#f8f9fa', padding: '40px 20px', borderBottom: '1px solid #eaeaea' }}>
+        <div className="container" style={{ maxWidth: '1000px' }}>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>Shop PasaBuy</h1>
+            <p style={{ color: '#666' }}>Browse unique items from around the world, verified by travelers.</p>
+        </div>
       </div>
+
+      <Suspense fallback={<div style={{ padding: '100px', textAlign: 'center' }}>Loading shop items...</div>}>
+        <ShopContent />
+      </Suspense>
+
       <Footer />
     </>
   );
