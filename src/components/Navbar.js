@@ -5,13 +5,15 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase'; 
 import { doc, getDoc } from 'firebase/firestore';
 import { useCart } from '../context/CartContext'; 
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
-  const [isSellerAccount, setIsSellerAccount] = useState(false); // Account HAS seller status in Firestore
+  const [isSellerAccount, setIsSellerAccount] = useState(false); 
   const { cart, pasaBag, viewMode, toggleViewMode } = useCart(); 
-  const isSellerMode = viewMode === 'seller'; // Current active view mode
+  const isSellerMode = viewMode === 'seller';
+  const router = useRouter(); // Initialize router
 
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
@@ -22,28 +24,23 @@ export default function Navbar() {
       if (currentUser) {
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
-        // Check if user is marked as a seller in the database
         if (docSnap.exists() && docSnap.data().isSeller) {
             setIsSellerAccount(true);
         } else {
             setIsSellerAccount(false);
         }
-      } else {
-        setIsSellerAccount(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login failed", error);
-    }
+  // --- CHANGED ---
+  const handleLoginRedirect = () => {
+    // Send user to the dedicated login page to handle authentication there.
+    router.push('/login');
   };
-
+  // ---------------
+  
   const handleLogout = async () => {
     await signOut(auth);
   };
@@ -194,7 +191,7 @@ export default function Navbar() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={handleLogin} style={{ background: 'none', border: 'none', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '600' }}>
+                <button onClick={handleLoginRedirect} style={{ background: 'none', border: 'none', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '600' }}>
                     Login
                 </button>
                 <Link href="/signup" className="btn-login" style={{ textDecoration: 'none' }}>
