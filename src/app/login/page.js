@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRedirect = async (user) => {
+    // This function checks if the profile exists and redirects accordingly
     const docRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(docRef);
 
@@ -43,7 +44,6 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       await handleRedirect(result.user);
@@ -61,25 +61,29 @@ export default function LoginPage() {
         <div style={{ background: 'white', padding: '40px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 5px 20px rgba(0,0,0,0.05)', maxWidth: '400px', width: '100%' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '10px', color: '#0070f3' }}>Welcome Back</h1>
             <p style={{ color: '#666', marginBottom: '30px', fontSize: '0.95rem' }}>
-                Login to Pasa.ph to continue your journey.
+                Log in to continue your journey.
             </p>
             
             {/* EMAIL/PASSWORD LOGIN FORM */}
             <form onSubmit={handleEmailLogin} style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
                 <input 
-                    type="email" placeholder="Email Address" required
+                    type="email" 
+                    placeholder="Email Address" 
+                    required
                     value={email} onChange={(e) => setEmail(e.target.value)}
                     style={{ width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '8px' }}
                 />
                 <input 
-                    type="password" placeholder="Password" required
+                    type="password" 
+                    placeholder="Password" 
+                    required
                     value={password} onChange={(e) => setPassword(e.target.value)}
                     style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #ccc', borderRadius: '8px' }}
                 />
                 <button 
                     type="submit" 
                     className="btn-primary"
-                    disabled={isProcessing}
+                    disabled={isProcessing || !email || !password}
                     style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
                 >
                     {isProcessing ? 'Logging in...' : 'Log In'}
