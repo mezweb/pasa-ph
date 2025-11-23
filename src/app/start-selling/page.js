@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Added getDoc
+import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 export default function StartSellingPage() {
   const router = useRouter();
@@ -28,17 +28,35 @@ export default function StartSellingPage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        // Save intended destination if needed, but for now just redirect
-        router.push('/login');
-        return;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        
+        // If already a seller, redirect to dashboard
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().isSeller) {
+            router.push('/seller-dashboard');
+        } else {
+            setLoading(false); // Allow Buyers to see page
+        }
+      } else {
+        // If logged out, ALLOW viewing the page (don't redirect)
+        setUser(null);
+        setLoading(false);
       }
-      setUser(currentUser);
-      setLoading(false);
     });
     return () => unsubscribe();
   }, [router]);
+
+  const handleStart = () => {
+    if (!user) {
+        // Redirect to login if they try to start setup without account
+        router.push('/login'); 
+    } else {
+        setStep(prev => prev + 1);
+    }
+  };
 
   const handleNext = () => setStep(prev => prev + 1);
   const handleBack = () => setStep(prev => prev - 1);
@@ -123,7 +141,7 @@ export default function StartSellingPage() {
                         <p style={{ fontSize: '0.9rem', color: '#666' }}>Unlock tiers and exclusive requests.</p>
                     </div>
                 </div>
-                <button onClick={handleNext} className="btn-primary" style={{ padding: '15px 40px', fontSize: '1.1rem' }}>
+                <button onClick={handleStart} className="btn-primary" style={{ padding: '15px 40px', fontSize: '1.1rem' }}>
                     Start Setup
                 </button>
             </div>
@@ -289,4 +307,4 @@ export default function StartSellingPage() {
       <Footer />
     </>
   );
-} 
+}
