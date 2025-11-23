@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
-import Navbar from '../../components/Navbar'; // CORRECTED: ../../
-import Footer from '../../components/Footer'; // CORRECTED: ../../
+import { db } from '@/lib/firebase';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { POPULAR_PRODUCTS } from '../../../lib/products'; 
+import { POPULAR_PRODUCTS } from '@/lib/products'; 
 
 // --- MOCK DATA GENERATOR ---
 const getSellerProfile = (id) => {

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase'; // Corrected path
-import Navbar from '../../components/Navbar'; // CORRECTED PATH
-import Footer from '../../components/Footer'; // CORRECTED PATH
+import { db } from '@/lib/firebase'; 
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import Link from 'next/link';
 
 export default function RequestDetailPage() {
