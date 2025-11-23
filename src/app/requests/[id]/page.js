@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase'; // Corrected path
-import Navbar from '../../../components/Navbar'; // Corrected path
-import Footer from '../../../components/Footer'; // Corrected path
+import Navbar from '../../components/Navbar'; // CORRECTED PATH
+import Footer from '../../components/Footer'; // CORRECTED PATH
 import Link from 'next/link';
 
 export default function RequestDetailPage() {
@@ -86,9 +86,6 @@ export default function RequestDetailPage() {
                         borderRadius: '16px', 
                         overflow: 'hidden', 
                         border: '1px solid #eee',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                         marginBottom: '15px'
                     }}>

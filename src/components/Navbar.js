@@ -5,15 +5,16 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase'; 
 import { doc, getDoc } from 'firebase/firestore';
 import { useCart } from '../context/CartContext'; 
-import { onAuthStateChanged } from 'firebase/auth';
-import { useRouter } from 'next/navigation'; // Import useRouter
+// FIX: Added 'signOut' to the imports list
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'; 
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
   const [isSellerAccount, setIsSellerAccount] = useState(false); 
   const { cart, pasaBag, viewMode, toggleViewMode } = useCart(); 
   const isSellerMode = viewMode === 'seller';
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
 
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
@@ -29,20 +30,24 @@ export default function Navbar() {
         } else {
             setIsSellerAccount(false);
         }
+      } else {
+        setIsSellerAccount(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // --- CHANGED ---
   const handleLoginRedirect = () => {
-    // Send user to the dedicated login page to handle authentication there.
     router.push('/login');
   };
-  // ---------------
-  
+
   const handleLogout = async () => {
-    await signOut(auth);
+    await signOut(auth); 
+    router.push('/');
+  };
+
+  const toggleMode = () => {
+    toggleViewMode();
   };
 
   const itemCount = (!user || !isSellerMode) ? cart.length : pasaBag.length;
@@ -93,19 +98,22 @@ export default function Navbar() {
                     <Link href="/offers">Sellers</Link>
                     <Link href="/how-it-works">How it Works</Link>
                     <Link href="/support">Support</Link>
+                    {/* CHANGED: Link directly to /start-selling instead of login */}
+                    <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                 </>
             ) : (
                 /* --- LOGGED IN STATE (ROLE BASED) --- */
                 <>
                     {isSellerMode ? (
-                        // Seller Mode
+                        // Seller Mode (Already a seller, hide Start Selling)
                         <>
                             <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Marketplace</Link>
                             <Link href="/buyers">Buyers</Link>
                             <Link href="/seller-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
+                            <Link href="/support">Support</Link>
                         </>
                     ) : (
-                        // Buyer Mode
+                        // Buyer Mode (Check if they are a seller account or not)
                         <>
                              <div 
                                 style={{ position: 'relative' }}
@@ -117,38 +125,23 @@ export default function Navbar() {
                                 </Link>
                                 {isShopHovered && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, background: 'white', border: '1px solid #eaeaea', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '200px', padding: '15px', display: 'flex', flexDirection: 'column', zIndex: 100, gap: '15px' }}>
-                                
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Categories</div>
-                                            <Link href="/shop" style={{ display:'block', padding: '4px 0', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>All Items</Link>
-                                            <Link href="/shop?category=Food" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Food</Link>
-                                            <Link href="/shop?category=Beauty" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Beauty</Link>
-                                            <Link href="/shop?category=Electronics" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Electronics</Link>
-                                        </div>
-
-                                        <div style={{ borderTop: '1px solid #eee', paddingTop: '10px' }}>
-                                            <div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Shop by Country</div>
-                                            <Link href="/shop?country=Philippines" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇵🇭 Philippines (Local)</Link>
-                                            <Link href="/shop?country=Japan" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇯🇵 Japan</Link>
-                                            <Link href="/shop?country=USA" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇺🇸 USA</Link>
-                                            <Link href="/shop?country=South Korea" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇰🇷 Korea</Link>
-                                        </div>
-
+                                        <div><div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Categories</div><Link href="/shop" style={{ display:'block', padding: '4px 0', color: '#333', fontSize: '0.9rem', fontWeight: 'bold' }}>All Items</Link><Link href="/shop?category=Food" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Food</Link><Link href="/shop?category=Beauty" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Beauty</Link><Link href="/shop?category=Electronics" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>Electronics</Link></div>
+                                        <div style={{ borderTop: '1px solid #eee', paddingTop: '10px' }}><div style={{ fontSize: '0.75rem', color: '#999', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '5px' }}>Shop by Country</div><Link href="/shop?country=Philippines" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇵🇭 Philippines (Local)</Link><Link href="/shop?country=Japan" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇯🇵 Japan</Link><Link href="/shop?country=USA" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇺🇸 USA</Link><Link href="/shop?country=South Korea" style={{ display:'block', padding: '4px 0', color: '#666', fontSize: '0.9rem' }}>🇰🇷 Korea</Link></div>
                                     </div>
                                 )}
                             </div>
                             
                             <Link href="/offers">Sellers</Link>
                             <Link href="/how-it-works">How it Works</Link>
+                            <Link href="/support">Support</Link>
                             
                             {/* NEW BUYER DASHBOARD LINK */}
                             <Link href="/buyer-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
                             
                             {/* Start Selling link only visible if account exists but IS NOT a seller */}
-                            {!isSellerAccount && user && (
+                            {!isSellerAccount && (
                                 <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                             )}
-                            <Link href="/support">Support</Link>
                         </>
                     )}
                 </>
@@ -177,7 +170,7 @@ export default function Navbar() {
                         
                         {isSellerAccount && (
                             <button 
-                                onClick={toggleViewMode}
+                                onClick={toggleMode}
                                 style={{ background: 'none', border: 'none', padding: '10px 15px', textAlign: 'left', cursor: 'pointer', color: '#0070f3', fontSize: '0.9rem', borderTop: '1px solid #eee', width: '100%' }}
                             >
                                 {isSellerMode ? 'Switch to Buying' : 'Switch to Selling'}

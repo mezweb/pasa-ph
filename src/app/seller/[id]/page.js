@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation'; // Added useRouter
+import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase'; // Correct path to lib
-import Navbar from '../../../components/Navbar'; // Corrected path
-import Footer from '../../../components/Footer'; // Corrected path
+import { db } from '../../../lib/firebase';
+import Navbar from '../../components/Navbar'; // CORRECTED: ../../
+import Footer from '../../components/Footer'; // CORRECTED: ../../
 import Link from 'next/link';
-import { POPULAR_PRODUCTS } from '../../../lib/products'; // Import products to find IDs
+import { POPULAR_PRODUCTS } from '../../../lib/products'; 
 
 // --- MOCK DATA GENERATOR ---
 const getSellerProfile = (id) => {
