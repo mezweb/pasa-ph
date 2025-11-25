@@ -137,7 +137,7 @@ export default function Home() {
             {/* 2. COUNTRY FILTERS (New Section) */}
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Country:</span>
-                {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong'].map(cou => (
+                {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(cou => (
                     <button 
                         key={cou} 
                         onClick={() => setCountryFilter(cou)} 
