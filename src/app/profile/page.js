@@ -16,10 +16,11 @@ export default function ProfilePage() {
 
   // Profile Form State
   const [role, setRole] = useState('Buyer');
-  const [isSellerMode, setIsSellerMode] = useState(false); 
+  const [isSellerMode, setIsSellerMode] = useState(false);
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
-  const [locations, setLocations] = useState(''); 
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [locations, setLocations] = useState('');
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
   const [tiktokVideoId, setTiktokVideoId] = useState('');
@@ -56,6 +57,7 @@ export default function ProfilePage() {
         setRole(data.role || 'Buyer');
         setIsSellerMode(data.isSeller || false);
         setCity(data.city || '');
+        setDeliveryAddress(data.deliveryAddress || '');
         setLocations(data.locations || '');
         setInstagram(data.socials?.instagram || '');
         setFacebook(data.socials?.facebook || '');
@@ -87,6 +89,7 @@ export default function ProfilePage() {
         email: user.email,
         bio,
         city,
+        deliveryAddress,
         locations,
         bannerUrl,
         focusCountry, // Save Focus Country
@@ -95,7 +98,7 @@ export default function ProfilePage() {
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      alert("Profile saved!");
+      // Success - no alert popup
     } catch (error) {
       console.error("Error saving profile:", error);
       alert("Failed to save profile.");
@@ -106,12 +109,12 @@ export default function ProfilePage() {
 
   const handleBecomeSeller = async () => {
     if (!confirm("Are you ready to start selling? This will enable your seller dashboard.")) return;
-    
+
     try {
         await setDoc(doc(db, "users", user.uid), { isSeller: true, role: 'Seller' }, { merge: true });
         setIsSellerMode(true);
         setRole('Seller');
-        alert("Congratulations! You are now a Seller.");
+        // Success - no alert popup
     } catch (error) {
         console.error("Error upgrading:", error);
     }
@@ -123,7 +126,6 @@ export default function ProfilePage() {
 
     try {
       if(!newItem.title || !newItem.price) {
-        alert("Title and Price are required!");
         return;
       }
 
@@ -135,7 +137,7 @@ export default function ProfilePage() {
 
       setMyItems([...myItems, { id: docRef.id, ...newItem }]);
       setNewItem({ title: '', category: 'Food', price: '', description: '', image1: '', image2: '', videoUrl: '' });
-      alert("Item added to your shop!");
+      // Success - no alert popup
 
     } catch (error) {
       console.error("Error adding item:", error);
@@ -177,12 +179,28 @@ export default function ProfilePage() {
                 <div style={{ display: 'flex', gap: '20px' }}>
                     <div style={{ flex: 1 }}>
                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '0.9rem' }}>Base City</label>
-                        <input 
+                        <input
                             type="text" placeholder="e.g. Quezon City" required
                             style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }}
                             value={city} onChange={(e) => setCity(e.target.value)}
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '0.9rem' }}>
+                        Delivery Address <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <textarea
+                        placeholder="Full delivery address including street, barangay, city, postal code"
+                        required
+                        style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px', minHeight: '80px' }}
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                    />
+                    <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>
+                        This address will be used for deliveries when you place orders
+                    </p>
                 </div>
 
                 {isSellerMode && (

@@ -41,7 +41,7 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    alert(`Added ${product.title} to Buyer Cart!`);
+    // Success - no alert popup
   };
 
   const removeFromCart = (productId) => {
@@ -58,7 +58,7 @@ export function CartProvider({ children }) {
       if (existing) return prev; // Prevent duplicate fulfillment of same item ID for MVP
       return [...prev, { ...product, quantity: 1 }];
     });
-    alert(`Added ${product.title} to Pasa Bag (Fulfillment)!`);
+    // Success - no alert popup
   };
 
   const removeFromBag = (productId) => {
