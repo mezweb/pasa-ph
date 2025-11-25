@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../../components/Navbar';
@@ -15,6 +15,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -106,6 +107,43 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const canCancelOrder = () => {
+    if (!order || order.status === 'cancelled' || order.status === 'delivered') return false;
+    if (!order.createdAt) return false;
+
+    const orderTime = new Date(order.createdAt.seconds * 1000);
+    const now = new Date();
+    const hoursSinceOrder = (now - orderTime) / (1000 * 60 * 60);
+
+    return hoursSinceOrder <= 48;
+  };
+
+  const handleCancelOrder = async () => {
+    if (!canCancelOrder()) {
+      alert('This order can no longer be cancelled. Please contact our support team at support@pasa.ph for assistance.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+
+    setIsCancelling(true);
+
+    try {
+      await updateDoc(doc(db, 'orders', order.id), {
+        status: 'cancelled',
+        cancelledAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      setOrder({ ...order, status: 'cancelled' });
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Failed to cancel order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -176,6 +214,34 @@ export default function OrderDetailsPage() {
         {order.paymentMethod === 'cod' && order.status === 'pending_payment' && (
           <div style={{ marginTop: '20px', background: '#fff3cd', border: '1px solid #ffc107', padding: '15px', borderRadius: '8px', color: '#856404' }}>
             ⚠️ This is a Cash on Delivery order. Payment will be collected upon delivery.
+          </div>
+        )}
+
+        {order.status !== 'cancelled' && order.status !== 'delivered' && (
+          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={handleCancelOrder}
+              disabled={isCancelling}
+              style={{
+                padding: '12px 30px',
+                border: '2px solid #d32f2f',
+                borderRadius: '8px',
+                background: 'white',
+                color: '#d32f2f',
+                fontWeight: 'bold',
+                cursor: isCancelling ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                opacity: isCancelling ? 0.6 : 1
+              }}
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+            </button>
+          </div>
+        )}
+
+        {order.status === 'cancelled' && (
+          <div style={{ marginTop: '20px', background: '#ffebee', border: '1px solid #ef5350', padding: '15px', borderRadius: '8px', color: '#c62828' }}>
+            ❌ This order has been cancelled.
           </div>
         )}
       </div>

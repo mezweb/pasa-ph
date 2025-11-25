@@ -36,13 +36,11 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (!user) {
-        alert("Please login to checkout.");
         router.push('/login');
         return;
     }
 
     if (isSellerMode) {
-        alert("Items confirmed for fulfillment! Buyers will be notified.");
         clearFunc();
         return;
     }
@@ -81,7 +79,6 @@ export default function CartPage() {
         const orderData = await orderResponse.json();
 
         if (orderData.success) {
-          alert('Order placed successfully! You will pay upon delivery.');
           clearCart();
           router.push(`/orders/${orderData.orderId}`);
         } else {
@@ -129,19 +126,17 @@ export default function CartPage() {
         throw new Error('Failed to create order');
       }
 
+      // Clear cart before redirecting to Stripe
+      clearCart();
+
       // Redirect to Stripe Checkout
       const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({
+      await stripe.redirectToCheckout({
         sessionId: data.sessionId,
       });
-
-      if (error) {
-        console.error('Stripe redirect error:', error);
-        alert('Payment failed. Please try again.');
-      }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Failed to process checkout. Please try again.');
+      // Error will be shown via UI state
     } finally {
       setIsProcessing(false);
     }
