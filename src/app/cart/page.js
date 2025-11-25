@@ -4,15 +4,20 @@ import { useCart } from '../../context/CartContext';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
-import { auth, db } from '../../lib/firebase'; 
+import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart, pasaBag, removeFromBag, clearBag, viewMode } = useCart();
   const [user, setUser] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,37 +44,106 @@ export default function CartPage() {
     if (isSellerMode) {
         alert("Items confirmed for fulfillment! Buyers will be notified.");
         clearFunc();
-    } else {
-        if(!confirm(`Confirm order for ₱${total}? (Simulated Payment)`)) return;
+        return;
+    }
 
-        try {
-            const promises = currentList.map(item => {
-                return addDoc(collection(db, "requests"), {
-                    title: item.title,
-                    category: item.category || 'General',
-                    price: item.price,
-                    quantity: item.quantity,
-                    image: item.image || item.images?.[0] || '',
-                    from: item.from || 'General',
-                    to: 'Manila',
-                    userId: user.uid,
-                    userName: user.displayName,
-                    userPhoto: user.photoURL,
-                    status: 'Shipped', // MOCK: Set to Shipped so tracking UI is visible
-                    createdAt: serverTimestamp()
-                });
-            });
+    setIsProcessing(true);
 
-            await Promise.all(promises);
-            
-            alert("Order placed successfully! Check your Dashboard.");
-            clearFunc();
-            router.push('/buyer-dashboard');
+    try {
+      // Prepare items for checkout
+      const items = currentList.map(item => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity || 1,
+        from: item.from,
+        category: item.category,
+        images: item.images || [item.image],
+      }));
 
-        } catch (error) {
-            console.error("Error placing order:", error);
-            alert("Failed to place order. Please try again.");
+      // Handle Cash on Delivery
+      if (paymentMethod === 'cod') {
+        // Create order directly without Stripe
+        const orderResponse = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            userEmail: user.email,
+            userName: user.displayName,
+            items,
+            totalAmount: total,
+            paymentMethod: 'cod',
+            sessionId: null,
+          }),
+        });
+
+        const orderData = await orderResponse.json();
+
+        if (orderData.success) {
+          alert('Order placed successfully! You will pay upon delivery.');
+          clearCart();
+          router.push(`/orders/${orderData.orderId}`);
+        } else {
+          throw new Error('Failed to create order');
         }
+        return;
+      }
+
+      // Handle Stripe payments (card, gcash, paymaya)
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          userId: user.uid,
+          userEmail: user.email,
+          paymentMethod,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.sessionId) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      // Create order in Firebase before redirecting to Stripe
+      const orderResponse = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          userEmail: user.email,
+          userName: user.displayName,
+          items,
+          totalAmount: total,
+          paymentMethod,
+          sessionId: data.sessionId,
+        }),
+      });
+
+      const orderData = await orderResponse.json();
+
+      if (!orderData.success) {
+        throw new Error('Failed to create order');
+      }
+
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      });
+
+      if (error) {
+        console.error('Stripe redirect error:', error);
+        alert('Payment failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to process checkout. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -119,15 +193,51 @@ export default function CartPage() {
                     </div>
                 ))}
 
+                {!isSellerMode && (
+                    <div style={{ marginTop: '20px', padding: '20px', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
+                        <h3 style={{ marginBottom: '15px', fontSize: '1.1rem' }}>Payment Method</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'card' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>💳 Credit/Debit Card</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Secure payment via Stripe</div>
+                                </div>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'gcash' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="gcash" checked={paymentMethod === 'gcash'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>📱 GCash</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay with GCash wallet</div>
+                                </div>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'paymaya' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="paymaya" checked={paymentMethod === 'paymaya'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>💰 PayMaya</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay with PayMaya wallet</div>
+                                </div>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'cod' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>🏠 Cash on Delivery</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay when you receive your order</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ marginTop: '20px', padding: '20px', background: '#f0f9ff', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                        {isSellerMode ? 'Total Potential Earnings:' : 'Total:'} 
+                        {isSellerMode ? 'Total Potential Earnings:' : 'Total:'}
                         <span style={{ color: '#0070f3', marginLeft: '10px' }}>
                             ₱{isSellerMode ? (total * 0.15).toFixed(0) : total}
                         </span>
                     </div>
-                    <button onClick={handleCheckout} className="btn-primary">
-                        {isSellerMode ? 'Confirm Fulfillment' : 'Checkout'}
+                    <button onClick={handleCheckout} className="btn-primary" disabled={isProcessing}>
+                        {isProcessing ? 'Processing...' : (isSellerMode ? 'Confirm Fulfillment' : 'Proceed to Payment')}
                     </button>
                 </div>
             </div>
