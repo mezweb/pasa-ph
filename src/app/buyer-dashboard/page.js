@@ -14,8 +14,9 @@ export default function BuyerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
+  const [myCheckoutOrders, setMyCheckoutOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Tracking State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
@@ -28,23 +29,46 @@ export default function BuyerDashboard() {
       }
       setUser(currentUser);
 
-      const q = query(
-        collection(db, "requests"), 
+      // Query for old requests
+      const requestsQuery = query(
+        collection(db, "requests"),
         where("userId", "==", currentUser.uid),
         orderBy("createdAt", "desc")
       );
 
-      const unsubscribeOrders = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, type: 'request', ...doc.data() }));
         setMyOrders(items);
         setLoading(false);
       });
 
-      return () => unsubscribeOrders();
+      // Query for new checkout orders
+      const ordersQuery = query(
+        collection(db, "orders"),
+        where("userId", "==", currentUser.uid),
+        orderBy("createdAt", "desc")
+      );
+
+      const unsubscribeCheckoutOrders = onSnapshot(ordersQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, type: 'order', ...doc.data() }));
+        setMyCheckoutOrders(items);
+      });
+
+      return () => {
+        unsubscribeRequests();
+        unsubscribeCheckoutOrders();
+      };
     });
 
     return () => unsubscribeAuth();
   }, [router]);
+
+  // Combine both types of orders
+  const allOrders = [...myOrders, ...myCheckoutOrders].sort((a, b) => {
+    const aTime = a.createdAt?.seconds || 0;
+    const bTime = b.createdAt?.seconds || 0;
+    return bTime - aTime;
+  });
 
   const openTracking = (order) => {
     setSelectedOrder(order);
@@ -139,44 +163,54 @@ export default function BuyerDashboard() {
             {/* Stats Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0070f3', marginBottom: '5px' }}>{myOrders.length}</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0070f3', marginBottom: '5px' }}>{allOrders.length}</div>
                     <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Orders</div>
                 </div>
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
                     <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#2e7d32', marginBottom: '5px' }}>
-                        {myOrders.filter(o => o.status === 'Received' || o.status === 'Completed').length}
+                        {allOrders.filter(o => o.status === 'Received' || o.status === 'Completed' || o.status === 'delivered').length}
                     </div>
                     <div style={{ color: '#666', fontSize: '0.9rem' }}>Completed Deliveries</div>
                 </div>
                 <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#f97316', marginBottom: '5px' }}>₱{myOrders.reduce((acc, item) => acc + (item.price || 0), 0).toLocaleString()}</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#f97316', marginBottom: '5px' }}>
+                        ₱{allOrders.reduce((acc, item) => acc + (item.type === 'order' ? item.totalAmount || 0 : item.price || 0), 0).toLocaleString()}
+                    </div>
                     <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Value (Est.)</div>
                 </div>
             </div>
 
             {/* Orders List */}
             <h2 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>My Orders & Requests</h2>
-            
-            {myOrders.length === 0 ? (
+
+            {allOrders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
                     <p style={{ color: '#666', marginBottom: '20px' }}>You haven't made any requests yet.</p>
                     <Link href="/shop" className="btn-primary">Start Shopping</Link>
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {myOrders.map(order => (
+                    {allOrders.map(order => (
                         <div key={order.id} style={{ background: 'white', border: '1px solid #eaeaea', borderRadius: '12px', padding: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: '250px' }}>
                                 <div style={{ width: '80px', height: '80px', background: '#f9f9f9', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee' }}>
-                                    <img src={order.image || 'https://placehold.co/100?text=Item'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image || 'https://placehold.co/100?text=Item'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                                 <div>
-                                    <h3 style={{ margin: '0 0 5px', fontSize: '1.1rem' }}>{order.title}</h3>
+                                    <h3 style={{ margin: '0 0 5px', fontSize: '1.1rem' }}>
+                                        {order.type === 'order'
+                                            ? `Order #${order.id.substring(0, 8).toUpperCase()}`
+                                            : order.title}
+                                    </h3>
                                     <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-                                        From: <strong>{order.from}</strong> &bull; To: <strong>{order.to}</strong>
+                                        {order.type === 'order'
+                                            ? `${order.items?.length || 0} item(s) • ${order.paymentMethod?.toUpperCase()}`
+                                            : `From: ${order.from} • To: ${order.to}`}
                                     </p>
-                                    <p style={{ margin: '5px 0 0', color: '#0070f3', fontWeight: 'bold' }}>₱{order.price?.toLocaleString()}</p>
+                                    <p style={{ margin: '5px 0 0', color: '#0070f3', fontWeight: 'bold' }}>
+                                        ₱{order.type === 'order' ? order.totalAmount?.toLocaleString() : order.price?.toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
 
@@ -194,12 +228,22 @@ export default function BuyerDashboard() {
                                 </div>
                                 
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button 
-                                        onClick={() => openTracking(order)}
-                                        style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
-                                    >
-                                        Track Package
-                                    </button>
+                                    {order.type === 'order' ? (
+                                        <Link href={`/orders/${order.id}`}>
+                                            <button
+                                                style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #0070f3', background: '#0070f3', color: 'white', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                            >
+                                                View Order
+                                            </button>
+                                        </Link>
+                                    ) : (
+                                        <button
+                                            onClick={() => openTracking(order)}
+                                            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                        >
+                                            Track Package
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
