@@ -3,10 +3,9 @@ import Stripe from 'stripe';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
 export async function POST(request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 
