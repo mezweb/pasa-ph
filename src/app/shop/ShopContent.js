@@ -93,7 +93,7 @@ export default function ShopContent() {
                     {/* Country Filters */}
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
                          <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666' }}>Country:</span>
-                        {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong'].map(cou => (
+                        {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(cou => (
                             <button 
                                 key={cou}
                                 onClick={() => updateFilters(category, cou)}
