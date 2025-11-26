@@ -163,11 +163,11 @@ export default function CartPage() {
   return (
     <>
       <Navbar />
-      <div className="container" style={{ padding: '60px 20px', maxWidth: '800px', minHeight: '70vh' }}>
-        
+      <div className="container" style={{ padding: 'clamp(40px, 8vw, 60px) 20px', maxWidth: '800px', minHeight: '70vh' }}>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
-            <span style={{ fontSize: '2rem' }}>{isSellerMode ? '🛍️' : '🛒'}</span>
-            <h1 style={{ margin: 0 }}>{isSellerMode ? 'My Pasa Bag (Fulfillment List)' : 'Shopping Cart'}</h1>
+            <span style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>{isSellerMode ? '🛍️' : '🛒'}</span>
+            <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>{isSellerMode ? 'My Pasa Bag (Fulfillment List)' : 'Shopping Cart'}</h1>
         </div>
 
         {isSellerMode && (
@@ -186,56 +186,56 @@ export default function CartPage() {
                 </Link>
             </div>
         ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {currentList.map(item => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #eee' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <div style={{ width: '60px', height: '60px', background: '#eee', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: 'clamp(12px, 3vw, 20px)', borderRadius: '8px', border: '1px solid #eee', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
+                            <div style={{ width: 'clamp(50px, 12vw, 60px)', height: 'clamp(50px, 12vw, 60px)', background: '#eee', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                                 <img src={item.image || item.images?.[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </div>
-                            <div>
-                                <div style={{ fontWeight: 'bold' }}>{item.title}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', wordBreak: 'break-word' }}>{item.title}</div>
                                 {isSellerMode ? (
-                                    <div style={{ fontSize: '0.9rem', color: '#2e7d32' }}>Earnings: ₱{(item.price * 0.15).toFixed(0)} (Service Fee)</div>
+                                    <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#2e7d32' }}>Earnings: ₱{(item.price * 0.15).toFixed(0)} (Service Fee)</div>
                                 ) : (
-                                    <div style={{ fontSize: '0.9rem', color: '#666' }}>₱{item.price} x {item.quantity}</div>
+                                    <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#666' }}>₱{item.price} x {item.quantity}</div>
                                 )}
                             </div>
                         </div>
-                        <button onClick={() => removeFunc(item.id)} style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
+                        <button onClick={() => removeFunc(item.id)} style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'clamp(0.85rem, 2vw, 0.95rem)', padding: '5px 10px' }}>Remove</button>
                     </div>
                 ))}
 
                 {!isSellerMode && (
-                    <div style={{ marginTop: '20px', padding: '20px', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
-                        <h3 style={{ marginBottom: '15px', fontSize: '1.1rem' }}>Payment Method</h3>
+                    <div style={{ marginTop: '20px', padding: 'clamp(15px, 4vw, 20px)', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
+                        <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 2.5vw, 1.1rem)' }}>Payment Method</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'card' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
-                                <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', padding: 'clamp(10px, 3vw, 12px)', border: `2px solid ${paymentMethod === 'card' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 'bold' }}>💳 Credit/Debit Card</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Secure payment via Stripe</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>💳 Credit/Debit Card</div>
+                                    <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#666' }}>Secure payment via Stripe</div>
                                 </div>
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'gcash' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
-                                <input type="radio" name="payment" value="gcash" checked={paymentMethod === 'gcash'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', padding: 'clamp(10px, 3vw, 12px)', border: `2px solid ${paymentMethod === 'gcash' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="gcash" checked={paymentMethod === 'gcash'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 'bold' }}>📱 GCash</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay with GCash wallet</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>📱 GCash</div>
+                                    <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#666' }}>Pay with GCash wallet</div>
                                 </div>
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'paymaya' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
-                                <input type="radio" name="payment" value="paymaya" checked={paymentMethod === 'paymaya'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', padding: 'clamp(10px, 3vw, 12px)', border: `2px solid ${paymentMethod === 'paymaya' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="paymaya" checked={paymentMethod === 'paymaya'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 'bold' }}>💰 PayMaya</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay with PayMaya wallet</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>💰 PayMaya</div>
+                                    <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#666' }}>Pay with PayMaya wallet</div>
                                 </div>
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', padding: '12px', border: `2px solid ${paymentMethod === 'cod' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
-                                <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', padding: 'clamp(10px, 3vw, 12px)', border: `2px solid ${paymentMethod === 'cod' ? '#0070f3' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', transition: '0.2s' }}>
+                                <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginRight: '10px', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 'bold' }}>🏠 Cash on Delivery</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#666' }}>Pay when you receive your order</div>
+                                    <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>🏠 Cash on Delivery</div>
+                                    <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#666' }}>Pay when you receive your order</div>
                                 </div>
                             </label>
                         </div>
@@ -248,14 +248,14 @@ export default function CartPage() {
                     </div>
                 )}
 
-                <div style={{ marginTop: '20px', padding: '20px', background: '#f0f9ff', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                <div style={{ marginTop: '20px', padding: 'clamp(15px, 4vw, 20px)', background: '#f0f9ff', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', fontWeight: 'bold', flex: 1 }}>
                         {isSellerMode ? 'Total Potential Earnings:' : 'Total:'}
-                        <span style={{ color: '#0070f3', marginLeft: '10px' }}>
+                        <span style={{ color: '#0070f3', marginLeft: '10px', display: 'block' }}>
                             ₱{isSellerMode ? (total * 0.15).toFixed(0) : total}
                         </span>
                     </div>
-                    <button onClick={handleCheckout} className="btn-primary" disabled={isProcessing}>
+                    <button onClick={handleCheckout} className="btn-primary" disabled={isProcessing} style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', padding: 'clamp(10px, 3vw, 12px) clamp(20px, 5vw, 24px)' }}>
                         {isProcessing ? 'Processing...' : (isSellerMode ? 'Confirm Fulfillment' : 'Proceed to Payment')}
                     </button>
                 </div>
