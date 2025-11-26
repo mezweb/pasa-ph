@@ -18,6 +18,7 @@ export default function CartPage() {
   const [user, setUser] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,8 +47,11 @@ export default function CartPage() {
     }
 
     setIsProcessing(true);
+    setError(null);
 
     try {
+      console.log('Starting checkout process...');
+
       // Prepare items for checkout
       const items = currentList.map(item => ({
         id: item.id,
@@ -59,9 +63,12 @@ export default function CartPage() {
         images: item.images || [item.image],
       }));
 
+      console.log('Items prepared:', items);
+      console.log('Payment method:', paymentMethod);
+
       // Handle Cash on Delivery
       if (paymentMethod === 'cod') {
-        // Create order directly without Stripe
+        console.log('Processing COD order...');
         const orderResponse = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -77,17 +84,19 @@ export default function CartPage() {
         });
 
         const orderData = await orderResponse.json();
+        console.log('COD Order response:', orderData);
 
         if (orderData.success) {
           clearCart();
           router.push(`/orders/${orderData.orderId}`);
         } else {
-          throw new Error('Failed to create order');
+          throw new Error(orderData.error || 'Failed to create order');
         }
         return;
       }
 
       // Handle Stripe payments (card, gcash, paymaya)
+      console.log('Creating Stripe checkout session...');
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,13 +108,20 @@ export default function CartPage() {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
       const data = await response.json();
+      console.log('Stripe session response:', data);
 
       if (!data.sessionId) {
-        throw new Error('Failed to create checkout session');
+        throw new Error('No session ID received from Stripe');
       }
 
       // Create order in Firebase before redirecting to Stripe
+      console.log('Creating order in Firebase...');
       const orderResponse = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,22 +137,33 @@ export default function CartPage() {
       });
 
       const orderData = await orderResponse.json();
+      console.log('Firebase order response:', orderData);
 
       if (!orderData.success) {
-        throw new Error('Failed to create order');
+        throw new Error(orderData.error || 'Failed to create order in database');
       }
 
       // Clear cart before redirecting to Stripe
       clearCart();
 
       // Redirect to Stripe Checkout
+      console.log('Redirecting to Stripe checkout...');
       const stripe = await stripePromise;
-      await stripe.redirectToCheckout({
+
+      if (!stripe) {
+        throw new Error('Stripe failed to initialize. Please check your Stripe publishable key.');
+      }
+
+      const { error: stripeError } = await stripe.redirectToCheckout({
         sessionId: data.sessionId,
       });
+
+      if (stripeError) {
+        throw new Error(stripeError.message || 'Stripe redirect failed');
+      }
     } catch (error) {
       console.error('Checkout error:', error);
-      // Error will be shown via UI state
+      setError(error.message || 'An error occurred during checkout. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -221,6 +248,12 @@ export default function CartPage() {
                                 </div>
                             </label>
                         </div>
+                    </div>
+                )}
+
+                {error && (
+                    <div style={{ marginTop: '20px', padding: '15px', background: '#ffebee', border: '1px solid #ef5350', borderRadius: '8px', color: '#c62828' }}>
+                        <strong>Error:</strong> {error}
                     </div>
                 )}
 
