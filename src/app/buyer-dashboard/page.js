@@ -195,7 +195,11 @@ export default function BuyerDashboard() {
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: '250px' }}>
                                 <div style={{ width: '80px', height: '80px', background: '#f9f9f9', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee' }}>
-                                    <img src={order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image || 'https://placehold.co/100?text=Item'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    {(order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image) ? (
+                                        <img src={order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '2rem' }}>📦</span>
+                                    )}
                                 </div>
                                 <div>
                                     <h3 style={{ margin: '0 0 5px', fontSize: '1.1rem' }}>
@@ -271,7 +275,13 @@ export default function BuyerDashboard() {
 
                 {/* Order Info Header */}
                 <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
-                    <img src={selectedOrder.image || 'https://placehold.co/100'} style={{ width: '60px', height: '60px', borderRadius: '6px', objectFit: 'cover' }} />
+                    <div style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', border: '1px solid #eee' }}>
+                        {selectedOrder.image ? (
+                            <img src={selectedOrder.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <span style={{ fontSize: '1.5rem' }}>📦</span>
+                        )}
+                    </div>
                     <div>
                         <h4 style={{ margin: '0 0 5px' }}>{selectedOrder.title}</h4>
                         <div style={{ fontSize: '0.85rem', color: '#666' }}>ID: {selectedOrder.id.slice(0, 12).toUpperCase()}</div>
