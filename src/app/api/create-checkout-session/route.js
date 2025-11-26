@@ -59,6 +59,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       sessionId: session.id,
+      url: session.url, // Add the checkout URL
       paymentMethod,
       success: true
     });
