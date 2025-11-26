@@ -9,9 +9,6 @@ import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/fires
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart, pasaBag, removeFromBag, clearBag, viewMode } = useCart();
@@ -146,21 +143,15 @@ export default function CartPage() {
       // Clear cart before redirecting to Stripe
       clearCart();
 
-      // Redirect to Stripe Checkout
+      // Redirect to Stripe Checkout using the session URL
       console.log('Redirecting to Stripe checkout...');
-      const stripe = await stripePromise;
 
-      if (!stripe) {
-        throw new Error('Stripe failed to initialize. Please check your Stripe publishable key.');
+      if (!data.url) {
+        throw new Error('No checkout URL received from Stripe');
       }
 
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId,
-      });
-
-      if (stripeError) {
-        throw new Error(stripeError.message || 'Stripe redirect failed');
-      }
+      // Direct redirect to Stripe checkout page
+      window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       setError(error.message || 'An error occurred during checkout. Please try again.');
