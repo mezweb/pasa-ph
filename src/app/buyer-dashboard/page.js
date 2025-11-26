@@ -156,86 +156,87 @@ export default function BuyerDashboard() {
             
             {/* Header */}
             <div style={{ marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '2rem', margin: '0 0 10px' }}>Buyer Dashboard</h1>
-                <p style={{ color: '#666' }}>Welcome back, {user?.displayName || 'Shopper'}! Track your pasabuys here.</p>
+                <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', margin: '0 0 10px' }}>Buyer Dashboard</h1>
+                <p style={{ color: '#666', fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}>Welcome back, {user?.displayName || 'Shopper'}! Track your pasabuys here.</p>
             </div>
 
             {/* Stats Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0070f3', marginBottom: '5px' }}>{allOrders.length}</div>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Orders</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '40px' }}>
+                <div style={{ background: 'white', padding: '20px 15px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                    <div style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: '800', color: '#0070f3', marginBottom: '5px' }}>{allOrders.length}</div>
+                    <div style={{ color: '#666', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)' }}>Total Orders</div>
                 </div>
-                <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#2e7d32', marginBottom: '5px' }}>
+                <div style={{ background: 'white', padding: '20px 15px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                    <div style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: '800', color: '#2e7d32', marginBottom: '5px' }}>
                         {allOrders.filter(o => o.status === 'Received' || o.status === 'Completed' || o.status === 'delivered').length}
                     </div>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>Completed Deliveries</div>
+                    <div style={{ color: '#666', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)' }}>Completed Deliveries</div>
                 </div>
-                <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: '800', color: '#f97316', marginBottom: '5px' }}>
+                <div style={{ background: 'white', padding: '20px 15px', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                    <div style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: '800', color: '#f97316', marginBottom: '5px' }}>
                         ₱{allOrders.reduce((acc, item) => acc + (item.type === 'order' ? item.totalAmount || 0 : item.price || 0), 0).toLocaleString()}
                     </div>
-                    <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Value (Est.)</div>
+                    <div style={{ color: '#666', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)' }}>Total Value (Est.)</div>
                 </div>
             </div>
 
             {/* Orders List */}
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>My Orders & Requests</h2>
+            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', marginBottom: '20px' }}>My Orders & Requests</h2>
 
             {allOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
-                    <p style={{ color: '#666', marginBottom: '20px' }}>You haven't made any requests yet.</p>
+                <div style={{ textAlign: 'center', padding: 'clamp(30px, 10vw, 60px)', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
+                    <p style={{ color: '#666', marginBottom: '20px', fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}>You haven't made any requests yet.</p>
                     <Link href="/shop" className="btn-primary">Start Shopping</Link>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     {allOrders.map(order => (
-                        <div key={order.id} style={{ background: 'white', border: '1px solid #eaeaea', borderRadius: '12px', padding: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                            
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: '250px' }}>
-                                <div style={{ width: '80px', height: '80px', background: '#f9f9f9', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee' }}>
+                        <div key={order.id} style={{ background: 'white', border: '1px solid #eaeaea', borderRadius: '12px', padding: 'clamp(15px, 4vw, 25px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
+                                <div style={{ width: 'clamp(60px, 15vw, 80px)', height: 'clamp(60px, 15vw, 80px)', background: '#f9f9f9', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee', flexShrink: 0 }}>
                                     {(order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image) ? (
                                         <img src={order.type === 'order' ? order.items?.[0]?.images?.[0] : order.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                        <span style={{ fontSize: '2rem' }}>📦</span>
+                                        <span style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>📦</span>
                                     )}
                                 </div>
-                                <div>
-                                    <h3 style={{ margin: '0 0 5px', fontSize: '1.1rem' }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h3 style={{ margin: '0 0 5px', fontSize: 'clamp(1rem, 2.5vw, 1.1rem)', wordBreak: 'break-word' }}>
                                         {order.type === 'order'
                                             ? `Order #${order.id.substring(0, 8).toUpperCase()}`
                                             : order.title}
                                     </h3>
-                                    <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+                                    <p style={{ margin: 0, color: '#666', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', wordBreak: 'break-word' }}>
                                         {order.type === 'order'
                                             ? `${order.items?.length || 0} item(s) • ${order.paymentMethod?.toUpperCase()}`
                                             : `From: ${order.from} • To: ${order.to}`}
                                     </p>
-                                    <p style={{ margin: '5px 0 0', color: '#0070f3', fontWeight: 'bold' }}>
+                                    <p style={{ margin: '5px 0 0', color: '#0070f3', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
                                         ₱{order.type === 'order' ? order.totalAmount?.toLocaleString() : order.price?.toLocaleString()}
                                     </p>
                                 </div>
                             </div>
 
-                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
-                                <div style={{ 
-                                    padding: '6px 12px', 
-                                    borderRadius: '20px', 
-                                    fontSize: '0.8rem', 
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', width: '100%', maxWidth: '200px' }}>
+                                <div style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: 'clamp(0.75rem, 2vw, 0.8rem)',
                                     fontWeight: 'bold',
-                                    background: getStatusColor(order.status || 'Pending') + '20', 
+                                    background: getStatusColor(order.status || 'Pending') + '20',
                                     color: getStatusColor(order.status || 'Pending'),
-                                    border: `1px solid ${getStatusColor(order.status || 'Pending')}40`
+                                    border: `1px solid ${getStatusColor(order.status || 'Pending')}40`,
+                                    whiteSpace: 'nowrap'
                                 }}>
                                     {order.status || 'Awaiting Seller'}
                                 </div>
-                                
-                                <div style={{ display: 'flex', gap: '10px' }}>
+
+                                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                                     {order.type === 'order' ? (
-                                        <Link href={`/orders/${order.id}`}>
+                                        <Link href={`/orders/${order.id}`} style={{ flex: 1 }}>
                                             <button
-                                                style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #0070f3', background: '#0070f3', color: 'white', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                                style={{ width: '100%', padding: '8px 16px', borderRadius: '6px', border: '1px solid #0070f3', background: '#0070f3', color: 'white', cursor: 'pointer', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', fontWeight: '500' }}
                                             >
                                                 View Order
                                             </button>
@@ -243,7 +244,7 @@ export default function BuyerDashboard() {
                                     ) : (
                                         <button
                                             onClick={() => openTracking(order)}
-                                            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}
+                                            style={{ width: '100%', padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', fontWeight: '500' }}
                                         >
                                             Track Package
                                         </button>
