@@ -180,7 +180,7 @@ export default function Home() {
                             </div>
                             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>₱{product.price}</div>
-                                <button onClick={(e) => { e.preventDefault(); addToCart(product); }} style={{ background: '#0070f3', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>Add to Cart</button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(product); }} style={{ background: '#0070f3', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>Add to Cart</button>
                             </div>
                         </div>
                     </div>
