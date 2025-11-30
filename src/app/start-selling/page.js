@@ -34,14 +34,27 @@ export default function StartSellingPage() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        
-        // If already a seller, redirect to dashboard
+
+        // Only redirect if already a seller AND profile is complete
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().isSeller) {
+        if (docSnap.exists() && docSnap.data().isSeller && docSnap.data().isProfileComplete) {
             router.push('/seller-dashboard');
         } else {
-            setLoading(false); // Allow Buyers to see page
+            // Pre-populate form with existing user data if available
+            if (docSnap.exists()) {
+              const userData = docSnap.data();
+              setFormData(prev => ({
+                ...prev,
+                fullName: userData.displayName || currentUser.displayName || '',
+              }));
+            } else if (currentUser.displayName) {
+              setFormData(prev => ({
+                ...prev,
+                fullName: currentUser.displayName
+              }));
+            }
+            setLoading(false); // Allow new users to see the wizard
         }
       } else {
         // If logged out, ALLOW viewing the page (don't redirect)

@@ -36,14 +36,15 @@ export default function SignupPage() {
             email: user.email,
             photoURL: user.photoURL || 'https://placehold.co/32x32?text=U',
             role: selectedRole === 'seller' ? 'Seller' : 'Buyer',
-            isSeller: selectedRole === 'seller',
+            isSeller: false, // Don't set to true yet - let the onboarding wizard handle it
             createdAt: serverTimestamp(),
             isProfileComplete: false
         });
     }
 
+    // Redirect sellers to onboarding wizard
     if (selectedRole === 'seller') {
-        router.push('/profile');
+        router.push('/start-selling');
     } else {
         router.push('/');
     }
