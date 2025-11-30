@@ -7,12 +7,13 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   // --- BUYER STATE ---
   const [cart, setCart] = useState([]);
-  
+
   // --- SELLER STATE ---
   const [pasaBag, setPasaBag] = useState([]);
-  
+
   // --- UI STATE ---
   const [viewMode, setViewMode] = useState('buyer'); // 'buyer' or 'seller'
+  const [showCartPopup, setShowCartPopup] = useState(false); // Cart popup visibility
 
   // Load data from local storage
   useEffect(() => {
@@ -41,7 +42,8 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    // Success - no alert popup
+    // Show cart popup
+    setShowCartPopup(true);
   };
 
   const removeFromCart = (productId) => {
@@ -73,10 +75,11 @@ export function CartProvider({ children }) {
   };
 
   return (
-    <CartContext.Provider value={{ 
+    <CartContext.Provider value={{
         cart, addToCart, removeFromCart, clearCart,
         pasaBag, addToBag, removeFromBag, clearBag,
-        viewMode, setViewMode, toggleViewMode
+        viewMode, setViewMode, toggleViewMode,
+        showCartPopup, setShowCartPopup
     }}>
       {children}
     </CartContext.Provider>

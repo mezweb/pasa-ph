@@ -1,5 +1,6 @@
 import './globals.css';
 import { CartProvider } from '../context/CartContext'; // Import Provider
+import CartPopup from '../components/CartPopup'; // Import CartPopup
 
 export const metadata = {
   title: 'Pasa.ph - Pasabuy Marketplace',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
       <body>
         <CartProvider>
             {children}
+            <CartPopup />
         </CartProvider>
       </body>
     </html>
