@@ -14,11 +14,10 @@ import { auth } from '../lib/firebase';
 export default function Home() {
   const [category, setCategory] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All'); // New Country Filter State
-  const [sellerCategory, setSellerCategory] = useState('All'); 
-  const { addToCart, viewMode } = useCart(); 
+  const [sellerCategory, setSellerCategory] = useState('All');
+  const { addToCart, viewMode } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const router = useRouter(); 
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // --- CHECK AUTH STATUS ---
@@ -37,25 +36,6 @@ export default function Home() {
   }, [viewMode, router, isLoggedIn]);
   // ---------------------------------
 
-  const slides = [
-    { 
-        id: 1, bg: 'linear-gradient(135deg, #111, #333)', text: 'BLACK FRIDAY SALE', sub: 'Get up to 50% OFF on Electronics from USA', color: '#fff', btnColor: '#d4af37', btnText: '#000'
-    },
-    { 
-        id: 2, bg: 'linear-gradient(135deg, #c62828, #b71c1c)', text: 'HOLIDAY SPECIALS', sub: 'Send gifts to your loved ones in the Philippines', color: '#fff', btnColor: '#fff', btnText: '#b71c1c'
-    },
-    { 
-        id: 3, bg: 'linear-gradient(135deg, #f8bbd0, #f48fb1)', text: 'SKINCARE DEALS', sub: 'Top Korean & Japanese Beauty Products on Sale', color: '#880e4f', btnColor: '#880e4f', btnText: '#fff'
-    }
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000); 
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
   // Filter Products (Category + Country + Search)
   const filteredProducts = POPULAR_PRODUCTS.filter(p => {
     const matchesCategory = category === 'All' || p.category === category;
@@ -72,20 +52,60 @@ export default function Home() {
     <>
       <Navbar />
       
-      {/* --- PROMO SLIDER --- */}
-      <div style={{ height: '300px', position: 'relative', overflow: 'hidden' }}>
-        {slides.map((slide, index) => (
-            <div key={slide.id} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: slide.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: slide.color, opacity: index === currentSlide ? 1 : 0, transition: 'opacity 0.8s ease-in-out', zIndex: index === currentSlide ? 1 : 0 }}>
-                <h2 style={{ fontSize: '3rem', fontWeight: '900', marginBottom: '10px', textAlign: 'center' }}>{slide.text}</h2>
-                <p style={{ fontSize: '1.2rem', marginBottom: '20px', opacity: 0.9 }}>{slide.sub}</p>
-                <button onClick={() => document.getElementById('shop').scrollIntoView({behavior: 'smooth'})} style={{ padding: '12px 30px', fontSize: '1rem', fontWeight: 'bold', borderRadius: '30px', border: 'none', background: slide.btnColor, color: slide.btnText, cursor: 'pointer' }}>Shop Now</button>
-            </div>
-        ))}
-        <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px', zIndex: 10 }}>
-            {slides.map((_, idx) => (
-                <div key={idx} onClick={() => setCurrentSlide(idx)} style={{ width: '10px', height: '10px', borderRadius: '50%', background: idx === currentSlide ? 'white' : 'rgba(255,255,255,0.5)', cursor: 'pointer' }}></div>
-            ))}
-        </div>
+      {/* --- HERO BANNER --- */}
+      <div style={{
+        minHeight: 'clamp(250px, 40vh, 350px)',
+        background: 'linear-gradient(135deg, #0070f3 0%, #0051cc 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        padding: 'clamp(30px, 8vw, 60px) 20px',
+        textAlign: 'center'
+      }}>
+        <h1 style={{
+          fontSize: 'clamp(2rem, 6vw, 3.5rem)',
+          fontWeight: '900',
+          marginBottom: 'clamp(10px, 2vh, 15px)',
+          lineHeight: 1.2
+        }}>
+          Welcome to Pasa.ph
+        </h1>
+        <p style={{
+          fontSize: 'clamp(1rem, 3vw, 1.3rem)',
+          marginBottom: 'clamp(20px, 4vh, 30px)',
+          opacity: 0.95,
+          maxWidth: '700px',
+          lineHeight: 1.5
+        }}>
+          Your trusted peer-to-peer pasabuy marketplace. Get items from around the world, delivered by travelers to the Philippines.
+        </p>
+        <button
+          onClick={() => document.getElementById('shop').scrollIntoView({behavior: 'smooth'})}
+          style={{
+            padding: 'clamp(12px, 2vh, 15px) clamp(28px, 5vw, 40px)',
+            fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
+            fontWeight: 'bold',
+            borderRadius: '30px',
+            border: 'none',
+            background: 'white',
+            color: '#0070f3',
+            cursor: 'pointer',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+          }}
+        >
+          Start Shopping →
+        </button>
       </div>
 
       {/* --- SEARCH BAR --- */}
