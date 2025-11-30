@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
@@ -51,9 +52,94 @@ export default function SellerProfilePage() {
   const sellerName = decodeURIComponent(id);
   const seller = getSellerProfile(sellerName);
 
+  const [user, setUser] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [newRating, setNewRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [newReview, setNewReview] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check auth status
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Load reviews
+  useEffect(() => {
+    loadReviews();
+  }, [sellerName]);
+
+  const loadReviews = async () => {
+    try {
+      const reviewsQuery = query(
+        collection(db, 'reviews'),
+        where('sellerId', '==', sellerName),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(reviewsQuery);
+      const reviewsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setReviews(reviewsData);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    if (!user) {
+      alert('Please login to submit a review');
+      router.push('/login');
+      return;
+    }
+
+    if (newRating === 0) {
+      alert('Please select a rating');
+      return;
+    }
+
+    if (newReview.trim().length < 10) {
+      alert('Please write a review of at least 10 characters');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await addDoc(collection(db, 'reviews'), {
+        sellerId: sellerName,
+        userId: user.uid,
+        userName: user.displayName || user.email.split('@')[0],
+        rating: newRating,
+        comment: newReview.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      // Reset form
+      setNewRating(0);
+      setNewReview('');
+
+      // Reload reviews
+      await loadReviews();
+
+      alert('Review submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const getProductLink = (title) => {
     const found = POPULAR_PRODUCTS.find(p => p.title === title);
-    return found ? `/product/${found.id}` : '#'; 
+    return found ? `/product/${found.id}` : '#';
   };
 
   return (
@@ -153,6 +239,156 @@ export default function SellerProfilePage() {
                 <div style={{ background: 'white', borderRadius: '8px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#888', minHeight: '250px' }}>
                     <span style={{ fontSize: '2rem', marginBottom: '10px' }}>🛍️</span>
                     See all 50+ items sold
+                </div>
+            </div>
+
+            {/* REVIEWS SECTION */}
+            <div style={{ marginTop: '60px' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>Reviews & Ratings</h2>
+
+                {/* Write Review Form */}
+                <div style={{ background: 'white', borderRadius: '12px', padding: 'clamp(20px, 4vw, 30px)', marginBottom: '30px', border: '1px solid #eaeaea' }}>
+                    <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.3rem)', marginBottom: '20px' }}>Write a Review</h3>
+
+                    <form onSubmit={handleSubmitReview}>
+                        {/* Star Rating */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                Your Rating
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: 'clamp(2rem, 6vw, 2.5rem)' }}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <span
+                                        key={star}
+                                        onClick={() => setNewRating(star)}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        style={{
+                                            cursor: 'pointer',
+                                            color: star <= (hoverRating || newRating) ? '#f09433' : '#ddd',
+                                            transition: 'color 0.2s',
+                                            lineHeight: 1
+                                        }}
+                                    >
+                                        ★
+                                    </span>
+                                ))}
+                            </div>
+                            {newRating > 0 && (
+                                <div style={{ marginTop: '8px', fontSize: 'clamp(0.85rem, 2vw, 0.95rem)', color: '#666' }}>
+                                    You rated: {newRating} star{newRating !== 1 ? 's' : ''}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Review Text */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                Your Review
+                            </label>
+                            <textarea
+                                value={newReview}
+                                onChange={(e) => setNewReview(e.target.value)}
+                                placeholder="Share your experience with this seller... (minimum 10 characters)"
+                                style={{
+                                    width: '100%',
+                                    minHeight: '120px',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #ddd',
+                                    fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+                                    fontFamily: 'inherit',
+                                    resize: 'vertical',
+                                    outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#0070f3'}
+                                onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                            />
+                            <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#888', marginTop: '5px' }}>
+                                {newReview.length}/500 characters
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || !user}
+                            className="btn-primary"
+                            style={{
+                                fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+                                padding: 'clamp(10px, 2.5vw, 12px) clamp(20px, 5vw, 24px)',
+                                opacity: isSubmitting || !user ? 0.6 : 1,
+                                cursor: isSubmitting || !user ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {isSubmitting ? 'Submitting...' : !user ? 'Login to Review' : 'Submit Review'}
+                        </button>
+                        {!user && (
+                            <div style={{ marginTop: '10px', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', color: '#666' }}>
+                                Please <Link href="/login" style={{ color: '#0070f3', fontWeight: '600' }}>login</Link> to write a review
+                            </div>
+                        )}
+                    </form>
+                </div>
+
+                {/* Existing Reviews */}
+                <div>
+                    <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.2rem)', marginBottom: '20px' }}>
+                        Customer Reviews ({reviews.length})
+                    </h3>
+
+                    {reviews.length === 0 ? (
+                        <div style={{ background: 'white', padding: '40px', textAlign: 'center', borderRadius: '12px', border: '1px solid #eaeaea' }}>
+                            <div style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', marginBottom: '15px' }}>💬</div>
+                            <p style={{ color: '#888', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                No reviews yet. Be the first to review {seller.name}!
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            {reviews.map((review) => (
+                                <div
+                                    key={review.id}
+                                    style={{
+                                        background: 'white',
+                                        padding: 'clamp(15px, 4vw, 20px)',
+                                        borderRadius: '12px',
+                                        border: '1px solid #eaeaea'
+                                    }}
+                                >
+                                    {/* Review Header */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', marginBottom: '5px' }}>
+                                                {review.userName}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '4px', fontSize: 'clamp(1rem, 3vw, 1.2rem)' }}>
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span
+                                                        key={star}
+                                                        style={{
+                                                            color: star <= review.rating ? '#f09433' : '#ddd',
+                                                            lineHeight: 1
+                                                        }}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#888' }}>
+                                            {review.createdAt ? new Date(review.createdAt.toDate()).toLocaleDateString() : 'Just now'}
+                                        </div>
+                                    </div>
+
+                                    {/* Review Comment */}
+                                    <p style={{ margin: 0, color: '#333', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', lineHeight: 1.6 }}>
+                                        {review.comment}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
