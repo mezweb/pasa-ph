@@ -185,6 +185,16 @@ export default function SellerProfilePage() {
     return found ? `/product/${found.id}` : '#';
   };
 
+  // Calculate average rating from actual reviews
+  const calculateAverageRating = () => {
+    if (reviews.length === 0) return 0;
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    return (sum / reviews.length).toFixed(1);
+  };
+
+  const averageRating = calculateAverageRating();
+  const reviewCount = reviews.length;
+
   return (
     <>
       <Navbar />
@@ -236,8 +246,12 @@ export default function SellerProfilePage() {
                     </div>
                     <div style={{ width: '1px', background: '#ddd' }}></div>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#f09433' }}>{seller.stats.rating} ★</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Rating</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#f09433' }}>
+                            {averageRating > 0 ? `${averageRating} ★` : 'No ratings'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                            {reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'review' : 'reviews'}` : 'Rating'}
+                        </div>
                     </div>
                 </div>
 
