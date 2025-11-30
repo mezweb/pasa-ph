@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { POPULAR_PRODUCTS } from '../../lib/products';
 import { useCart } from '../../context/CartContext';
 
+// Country data with flags and visuals
+const COUNTRY_DATA = {
+  'Philippines': { flag: '🇵🇭', color: '#0070f3', image: 'https://images.unsplash.com/photo-1531219432768-9f540ce91ef3?w=1200&h=300&fit=crop' },
+  'Japan': { flag: '🇯🇵', color: '#c8102e', image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3?w=1200&h=300&fit=crop' },
+  'USA': { flag: '🇺🇸', color: '#b22234', image: 'https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=1200&h=300&fit=crop' },
+  'South Korea': { flag: '🇰🇷', color: '#cd2e3a', image: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=1200&h=300&fit=crop' },
+  'Singapore': { flag: '🇸🇬', color: '#ed2939', image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1200&h=300&fit=crop' },
+  'Hong Kong': { flag: '🇭🇰', color: '#de2910', image: 'https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=1200&h=300&fit=crop' },
+  'Vietnam': { flag: '🇻🇳', color: '#da251d', image: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&h=300&fit=crop' }
+};
+
 export default function ShopContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -94,7 +105,7 @@ export default function ShopContent() {
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
                          <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666' }}>Country:</span>
                         {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(cou => (
-                            <button 
+                            <button
                                 key={cou}
                                 onClick={() => updateFilters(category, cou)}
                                 style={{
@@ -109,7 +120,7 @@ export default function ShopContent() {
                                     whiteSpace: 'nowrap'
                                 }}
                             >
-                                {cou === 'Philippines' ? '🇵🇭 Philippines' : cou}
+                                {cou === 'All' ? 'All' : `${COUNTRY_DATA[cou]?.flag || ''} ${cou}`}
                             </button>
                         ))}
                     </div>
@@ -126,14 +137,81 @@ export default function ShopContent() {
                 </select>
             </div>
 
+            {/* Country Visual Banner */}
+            {country !== 'All' && COUNTRY_DATA[country] && (
+                <div style={{
+                    position: 'relative',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    marginBottom: '20px',
+                    height: '180px',
+                    background: `linear-gradient(135deg, ${COUNTRY_DATA[country].color}dd 0%, ${COUNTRY_DATA[country].color}99 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: `url(${COUNTRY_DATA[country].image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.3,
+                        filter: 'blur(2px)'
+                    }} />
+                    <div style={{
+                        position: 'relative',
+                        zIndex: 1,
+                        textAlign: 'center',
+                        color: 'white',
+                        padding: '20px'
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '10px' }}>
+                            {COUNTRY_DATA[country].flag}
+                        </div>
+                        <h2 style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                            Shopping from {country}
+                        </h2>
+                        <p style={{ fontSize: '1rem', margin: '5px 0 0', opacity: 0.95, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                            Discover authentic items from {country}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => updateFilters(category, 'All')}
+                        style={{
+                            position: 'absolute',
+                            top: '15px',
+                            right: '15px',
+                            background: 'rgba(255,255,255,0.9)',
+                            border: 'none',
+                            borderRadius: '20px',
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            color: '#333',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            zIndex: 2
+                        }}
+                    >
+                        ✕ Clear
+                    </button>
+                </div>
+            )}
+
             {/* Active Filter Display */}
             {(category !== 'All' || country !== 'All') && (
                 <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                    Showing results for 
+                    Showing results for
                     {category !== 'All' && <span style={{ fontWeight: 'bold', color: '#333' }}> {category}</span>}
                     {category !== 'All' && country !== 'All' && ' from '}
-                    {country !== 'All' && <span style={{ fontWeight: 'bold', color: '#333' }}> {country === 'Philippines' ? 'Philippines (Local)' : country}</span>}
-                    <button 
+                    {country !== 'All' && <span style={{ fontWeight: 'bold', color: '#333' }}> {COUNTRY_DATA[country]?.flag} {country === 'Philippines' ? 'Philippines (Local)' : country}</span>}
+                    <button
                         onClick={() => updateFilters('All', 'All')}
                         style={{ marginLeft: '15px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.8rem' }}
                     >

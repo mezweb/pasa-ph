@@ -2,14 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { POPULAR_PRODUCTS } from '../lib/products';
-import { POPULAR_SELLERS } from '../lib/sellers'; 
+import { POPULAR_SELLERS } from '../lib/sellers';
 import { useCart } from '../context/CartContext';
-import { onAuthStateChanged } from 'firebase/auth'; 
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+
+// Country data with flags
+const COUNTRY_DATA = {
+  'Philippines': { flag: '🇵🇭' },
+  'Japan': { flag: '🇯🇵' },
+  'USA': { flag: '🇺🇸' },
+  'South Korea': { flag: '🇰🇷' },
+  'Singapore': { flag: '🇸🇬' },
+  'Hong Kong': { flag: '🇭🇰' },
+  'Vietnam': { flag: '🇻🇳' }
+};
 
 export default function Home() {
   const [category, setCategory] = useState('All');
@@ -158,22 +169,22 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Country:</span>
                 {['All', 'Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(cou => (
-                    <button 
-                        key={cou} 
-                        onClick={() => setCountryFilter(cou)} 
-                        style={{ 
-                            padding: '6px 14px', 
-                            borderRadius: '20px', 
+                    <button
+                        key={cou}
+                        onClick={() => setCountryFilter(cou)}
+                        style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
                             border: '1px solid #ddd', // Outline style for secondary filters
-                            background: countryFilter === cou ? '#333' : 'white', 
-                            color: countryFilter === cou ? 'white' : '#666', 
-                            cursor: 'pointer', 
+                            background: countryFilter === cou ? '#333' : 'white',
+                            color: countryFilter === cou ? 'white' : '#666',
+                            cursor: 'pointer',
                             fontSize: '0.85rem',
-                            fontWeight: '500', 
-                            whiteSpace: 'nowrap' 
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap'
                         }}
                     >
-                        {cou === 'Philippines' ? '🇵🇭 Philippines' : cou}
+                        {cou === 'All' ? 'All' : `${COUNTRY_DATA[cou]?.flag || ''} ${cou}`}
                     </button>
                 ))}
             </div>
