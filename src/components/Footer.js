@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Footer() {
   return (
     <footer style={{ background: 'white', borderTop: '1px solid #eaeaea', padding: '60px 0 30px', marginTop: 'auto' }}>
@@ -9,10 +11,17 @@ export default function Footer() {
                 </div>
                 <div>
                     <h4 style={{ fontWeight: 'bold', marginBottom: '20px' }}>Company</h4>
-                    <ul style={{ color: '#666', fontSize: '0.9rem', lineHeight: '2' }}>
-                        <li>About Us</li>
-                        <li>Careers</li>
-                        <li>Press</li>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/about" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                About Us
+                            </Link>
+                        </li>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/careers" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                Careers
+                            </Link>
+                        </li>
                     </ul>
                 </div>
             </div>
