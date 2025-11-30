@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Added getDoc
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/components/Navbar';
@@ -11,20 +11,23 @@ import Footer from '@/components/Footer';
 export default function StartSellingPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [step, setStep] = useState(0); // 0: Intro, 1: Basics, 2: Trust, 3: Tiers
+  const [step, setStep] = useState(0); // 0: Intro, 1: Basic Info, 2: Preferences, 3: Complete
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
-    focusCountry: 'Japan',
+    // Step 1: Basic Info
+    fullName: '',
     city: '',
+    address: '',
+    phoneNumber: '',
+
+    // Step 2: Selling Preferences
+    focusCountries: ['Japan'],
+    categories: ['Food'],
     bio: '',
-    instagram: '',
-    facebook: '',
-    tiktokVideoId: '',
-    bannerUrl: '',
-    membership: 'Standard'
+    instagram: ''
   });
 
   useEffect(() => {
@@ -66,33 +69,59 @@ export default function StartSellingPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCompleteSetup = async (selectedTier) => {
+  const toggleCountry = (country) => {
+    setFormData(prev => ({
+      ...prev,
+      focusCountries: prev.focusCountries.includes(country)
+        ? prev.focusCountries.filter(c => c !== country)
+        : [...prev.focusCountries, country]
+    }));
+  };
+
+  const toggleCategory = (category) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category]
+    }));
+  };
+
+  const handleCompleteSetup = async () => {
     setIsSaving(true);
     try {
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
-        displayName: user.displayName,
+        displayName: formData.fullName || user.displayName,
         email: user.email,
         photoURL: user.photoURL,
-        isSeller: true, // ACTIVATE SELLER MODE
+        isSeller: true,
         role: 'Seller',
-        // Save Wizard Data
-        focusCountry: formData.focusCountry,
+
+        // Seller Information
+        fullName: formData.fullName,
         city: formData.city,
+        address: formData.address,
+        phoneNumber: formData.phoneNumber,
         bio: formData.bio,
-        bannerUrl: formData.bannerUrl,
+
+        // Selling Preferences
+        focusCountries: formData.focusCountries,
+        categories: formData.categories,
+
+        // Socials
         socials: {
-            instagram: formData.instagram,
-            facebook: formData.facebook,
-            tiktokVideoId: formData.tiktokVideoId
+          instagram: formData.instagram
         },
-        membershipTier: selectedTier, // Save selected tier
+
+        // Defaults
+        membershipTier: 'Standard',
         isProfileComplete: true,
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      alert(`Welcome to Pasa.ph as a ${selectedTier} Seller!`);
-      router.push('/seller-dashboard'); // Go to dashboard
+      router.push('/seller-dashboard');
     } catch (error) {
       console.error("Error saving seller profile:", error);
       alert("Something went wrong. Please try again.");
@@ -106,200 +135,277 @@ export default function StartSellingPage() {
   return (
     <>
       <Navbar />
-      <div className="container" style={{ padding: '60px 20px', maxWidth: '800px', minHeight: '80vh' }}>
-        
+      <div className="container" style={{ padding: 'clamp(40px, 8vw, 60px) 20px', maxWidth: '800px', minHeight: '80vh' }}>
+
         {/* PROGRESS BAR */}
         {step > 0 && (
-            <div style={{ marginBottom: '40px', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '100px', height: '6px', borderRadius: '4px', background: step >= 1 ? '#0070f3' : '#eee' }}></div>
-                <div style={{ width: '100px', height: '6px', borderRadius: '4px', background: step >= 2 ? '#0070f3' : '#eee' }}></div>
-                <div style={{ width: '100px', height: '6px', borderRadius: '4px', background: step >= 3 ? '#0070f3' : '#eee' }}></div>
+            <div style={{ marginBottom: 'clamp(30px, 6vw, 40px)', display: 'flex', gap: 'clamp(8px, 2vw, 10px)', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ flex: 1, maxWidth: '100px', height: '6px', borderRadius: '4px', background: step >= 1 ? '#0070f3' : '#eee' }}></div>
+                <div style={{ flex: 1, maxWidth: '100px', height: '6px', borderRadius: '4px', background: step >= 2 ? '#0070f3' : '#eee' }}></div>
+                <div style={{ flex: 1, maxWidth: '100px', height: '6px', borderRadius: '4px', background: step >= 3 ? '#0070f3' : '#eee' }}></div>
             </div>
         )}
 
         {/* STEP 0: INTRO */}
         {step === 0 && (
             <div style={{ textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '20px' }}>Become a Pasa Seller</h1>
-                <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '40px' }}>
+                <h1 style={{ fontSize: 'clamp(2rem, 6vw, 2.5rem)', fontWeight: '800', marginBottom: '20px' }}>Become a Pasa Seller</h1>
+                <p style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', color: '#666', marginBottom: 'clamp(30px, 6vw, 40px)' }}>
                     Turn your travels into earnings. Help people get the items they love from around the world.
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px', textAlign: 'left' }}>
-                    <div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '12px' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>💰</div>
-                        <h3 style={{ fontSize: '1.1rem' }}>Earn Extra Cash</h3>
-                        <p style={{ fontSize: '0.9rem', color: '#666' }}>Offset your travel costs by fulfilling orders.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'clamp(15px, 4vw, 20px)', marginBottom: 'clamp(30px, 6vw, 40px)', textAlign: 'left' }}>
+                    <div style={{ padding: 'clamp(15px, 4vw, 20px)', background: '#f9f9f9', borderRadius: '12px' }}>
+                        <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', marginBottom: '10px' }}>💰</div>
+                        <h3 style={{ fontSize: 'clamp(1rem, 2.5vw, 1.1rem)' }}>Earn Extra Cash</h3>
+                        <p style={{ fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', color: '#666' }}>Offset your travel costs by fulfilling orders.</p>
                     </div>
-                    <div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '12px' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔒</div>
-                        <h3 style={{ fontSize: '1.1rem' }}>Secure Payments</h3>
-                        <p style={{ fontSize: '0.9rem', color: '#666' }}>Payments are held in escrow until delivery.</p>
+                    <div style={{ padding: 'clamp(15px, 4vw, 20px)', background: '#f9f9f9', borderRadius: '12px' }}>
+                        <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', marginBottom: '10px' }}>🔒</div>
+                        <h3 style={{ fontSize: 'clamp(1rem, 2.5vw, 1.1rem)' }}>Secure Payments</h3>
+                        <p style={{ fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', color: '#666' }}>Payments are held in escrow until delivery.</p>
                     </div>
-                    <div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '12px' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌟</div>
-                        <h3 style={{ fontSize: '1.1rem' }}>Build Reputation</h3>
-                        <p style={{ fontSize: '0.9rem', color: '#666' }}>Unlock tiers and exclusive requests.</p>
+                    <div style={{ padding: 'clamp(15px, 4vw, 20px)', background: '#f9f9f9', borderRadius: '12px' }}>
+                        <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', marginBottom: '10px' }}>🌟</div>
+                        <h3 style={{ fontSize: 'clamp(1rem, 2.5vw, 1.1rem)' }}>Build Reputation</h3>
+                        <p style={{ fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', color: '#666' }}>Unlock tiers and exclusive requests.</p>
                     </div>
                 </div>
-                <button onClick={handleStart} className="btn-primary" style={{ padding: '15px 40px', fontSize: '1.1rem' }}>
+                <button onClick={handleStart} className="btn-primary" style={{ padding: 'clamp(12px, 3vw, 15px) clamp(30px, 8vw, 40px)', fontSize: 'clamp(1rem, 2.5vw, 1.1rem)' }}>
                     Start Setup
                 </button>
             </div>
         )}
 
-        {/* STEP 1: BASICS */}
+        {/* STEP 1: BASIC INFO */}
         {step === 1 && (
             <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-                <h2 style={{ marginBottom: '20px' }}>Where do you travel?</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h2 style={{ marginBottom: '10px', fontSize: 'clamp(1.5rem, 4vw, 1.75rem)' }}>Basic Information</h2>
+                <p style={{ color: '#666', marginBottom: '20px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Let buyers know who you are</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Primary Focus Country</label>
-                        <select 
-                            name="focusCountry"
-                            style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '8px' }}
-                            value={formData.focusCountry}
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Full Name *</label>
+                        <input
+                            name="fullName"
+                            type="text"
+                            placeholder="Juan Dela Cruz"
+                            required
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
+                            value={formData.fullName}
                             onChange={handleChange}
-                        >
-                            <option value="Japan">Japan</option>
-                            <option value="USA">USA</option>
-                            <option value="South Korea">South Korea</option>
-                            <option value="Singapore">Singapore</option>
-                            <option value="Hong Kong">Hong Kong</option>
-                            <option value="Indonesia">Indonesia</option>
-                        </select>
+                        />
                     </div>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Your Base City (Philippines)</label>
-                        <input 
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>City (Philippines) *</label>
+                        <input
                             name="city"
-                            type="text" 
+                            type="text"
                             placeholder="e.g. Quezon City"
                             required
-                            style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
                             value={formData.city}
                             onChange={handleChange}
                         />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-                        <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>Back</button>
-                        <button onClick={handleNext} className="btn-primary" disabled={!formData.city}>Next</button>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Complete Address *</label>
+                        <textarea
+                            name="address"
+                            placeholder="Street, Barangay, City, Province, Postal Code"
+                            required
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', minHeight: '80px', fontFamily: 'inherit', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
+                            value={formData.address}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Phone Number *</label>
+                        <input
+                            name="phoneNumber"
+                            type="tel"
+                            placeholder="+63 912 345 6789"
+                            required
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
+                            value={formData.phoneNumber}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', gap: '10px' }}>
+                        <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Back</button>
+                        <button
+                            onClick={handleNext}
+                            className="btn-primary"
+                            disabled={!formData.fullName || !formData.city || !formData.address || !formData.phoneNumber}
+                            style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>
         )}
 
-        {/* STEP 2: TRUST & BIO */}
+        {/* STEP 2: SELLING PREFERENCES */}
         {step === 2 && (
-            <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-                <h2 style={{ marginBottom: '20px' }}>Build Trust</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                <h2 style={{ marginBottom: '10px', fontSize: 'clamp(1.5rem, 4vw, 1.75rem)' }}>Selling Preferences</h2>
+                <p style={{ color: '#666', marginBottom: '20px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>What countries and products do you focus on?</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                    {/* Countries */}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Short Bio</label>
-                        <textarea 
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                            Countries You Can Source From * <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: '#666' }}>(Select at least one)</span>
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                            {['Philippines', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(country => (
+                                <button
+                                    key={country}
+                                    type="button"
+                                    onClick={() => toggleCountry(country)}
+                                    style={{
+                                        padding: 'clamp(10px, 2.5vw, 12px)',
+                                        border: `2px solid ${formData.focusCountries.includes(country) ? '#0070f3' : '#ddd'}`,
+                                        background: formData.focusCountries.includes(country) ? '#f0f9ff' : 'white',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: formData.focusCountries.includes(country) ? 'bold' : 'normal',
+                                        color: formData.focusCountries.includes(country) ? '#0070f3' : '#333',
+                                        fontSize: 'clamp(0.85rem, 2vw, 0.9rem)',
+                                        transition: '0.2s'
+                                    }}
+                                >
+                                    {formData.focusCountries.includes(country) ? '✓ ' : ''}{country}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Categories */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                            Product Categories * <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: '#666' }}>(Select at least one)</span>
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
+                            {['Food', 'Beauty', 'Electronics', 'Fashion', 'Toys', 'Books', 'Sports', 'Other'].map(category => (
+                                <button
+                                    key={category}
+                                    type="button"
+                                    onClick={() => toggleCategory(category)}
+                                    style={{
+                                        padding: 'clamp(10px, 2.5vw, 12px)',
+                                        border: `2px solid ${formData.categories.includes(category) ? '#0070f3' : '#ddd'}`,
+                                        background: formData.categories.includes(category) ? '#f0f9ff' : 'white',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: formData.categories.includes(category) ? 'bold' : 'normal',
+                                        color: formData.categories.includes(category) ? '#0070f3' : '#333',
+                                        fontSize: 'clamp(0.85rem, 2vw, 0.9rem)',
+                                        transition: '0.2s'
+                                    }}
+                                >
+                                    {formData.categories.includes(category) ? '✓ ' : ''}{category}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Bio */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                            Short Bio <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: '#666' }}>(Optional)</span>
+                        </label>
+                        <textarea
                             name="bio"
-                            placeholder="Tell buyers about your travel frequency and what items you specialize in..."
-                            style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '8px', minHeight: '100px', fontFamily: 'inherit' }}
+                            placeholder="Tell buyers about your travel frequency, sourcing experience, or what makes you a reliable seller..."
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', minHeight: '100px', fontFamily: 'inherit', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
                             value={formData.bio}
                             onChange={handleChange}
                         />
                     </div>
+
+                    {/* Instagram */}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Instagram (Optional)</label>
-                        <input 
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                            Instagram <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: '#666' }}>(Optional)</span>
+                        </label>
+                        <input
                             name="instagram"
-                            type="text" 
+                            type="text"
                             placeholder="@username"
-                            style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: 'clamp(10px, 2.5vw, 12px)', border: '1px solid #ccc', borderRadius: '8px', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
                             value={formData.instagram}
                             onChange={handleChange}
                         />
                     </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Shop Banner URL (Optional)</label>
-                        <input 
-                            name="bannerUrl"
-                            type="url" 
-                            placeholder="https://..."
-                            style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '8px' }}
-                            value={formData.bannerUrl}
-                            onChange={handleChange}
-                        />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-                        <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>Back</button>
-                        <button onClick={handleNext} className="btn-primary">Next</button>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', gap: '10px' }}>
+                        <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Back</button>
+                        <button
+                            onClick={handleNext}
+                            className="btn-primary"
+                            disabled={formData.focusCountries.length === 0 || formData.categories.length === 0}
+                            style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>
         )}
 
-        {/* STEP 3: SELECT TIER */}
+        {/* STEP 3: REVIEW & COMPLETE */}
         {step === 3 && (
-            <div>
-                <h2 style={{ marginBottom: '10px' }}>Select Your Membership</h2>
-                <p style={{ color: '#666', marginBottom: '40px' }}>Choose a plan to maximize your earnings.</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '40px' }}>
-                    
-                    {/* Standard */}
-                    <div style={{ border: '1px solid #ddd', borderRadius: '12px', padding: '30px', width: '280px', textAlign: 'center', position: 'relative' }}>
-                        <h3 style={{ marginBottom: '10px' }}>Standard</h3>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '20px' }}>Free</div>
-                        <ul style={{ listStyle: 'none', textAlign: 'left', fontSize: '0.9rem', color: '#666', marginBottom: '20px', lineHeight: '2' }}>
-                            <li>✅ Access Basic Requests</li>
-                            <li>✅ Standard Profile</li>
-                            <li>✅ 5% Platform Fee</li>
-                        </ul>
-                        <button 
-                            onClick={() => handleCompleteSetup('Standard')}
-                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontWeight: 'bold' }}
-                            disabled={isSaving}
-                        >
-                            Select Standard
-                        </button>
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                <h2 style={{ marginBottom: '10px', fontSize: 'clamp(1.5rem, 4vw, 1.75rem)', textAlign: 'center' }}>Almost Done! 🎉</h2>
+                <p style={{ color: '#666', marginBottom: '30px', textAlign: 'center', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Review your information below</p>
+
+                <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: 'clamp(20px, 5vw, 30px)', marginBottom: '30px' }}>
+                    {/* Basic Info */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <h3 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.25rem)', marginBottom: '10px', color: '#0070f3' }}>Basic Information</h3>
+                        <div style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)', lineHeight: '1.8' }}>
+                            <div><strong>Name:</strong> {formData.fullName}</div>
+                            <div><strong>City:</strong> {formData.city}</div>
+                            <div><strong>Address:</strong> {formData.address}</div>
+                            <div><strong>Phone:</strong> {formData.phoneNumber}</div>
+                        </div>
                     </div>
 
-                    {/* Gold */}
-                    <div style={{ border: '2px solid #d4af37', borderRadius: '12px', padding: '30px', width: '280px', textAlign: 'center', position: 'relative', background: '#fffbf2' }}>
-                        <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#d4af37', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold' }}>POPULAR</div>
-                        <h3 style={{ marginBottom: '10px' }}>Gold</h3>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '20px', color: '#d4af37' }}>₱199<span style={{fontSize: '0.9rem', color:'#666', fontWeight:'normal'}}>/mo</span></div>
-                        <ul style={{ listStyle: 'none', textAlign: 'left', fontSize: '0.9rem', color: '#666', marginBottom: '20px', lineHeight: '2' }}>
-                            <li>✅ <strong>Priority Access</strong> to Requests</li>
-                            <li>✅ Gold Seller Badge</li>
-                            <li>✅ 0% Fee (First 5)</li>
-                        </ul>
-                        <button 
-                            onClick={() => handleCompleteSetup('Gold')}
-                            className="btn-primary"
-                            style={{ width: '100%', padding: '12px', background: '#d4af37', border: 'none' }}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? "Setting up..." : "Select Gold"}
-                        </button>
-                    </div>
-
-                    {/* Diamond */}
-                    <div style={{ border: '1px solid #00c3ff', borderRadius: '12px', padding: '30px', width: '280px', textAlign: 'center', position: 'relative' }}>
-                        <h3 style={{ marginBottom: '10px' }}>Diamond</h3>
-                        <div style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '20px', color: '#00c3ff' }}>₱499<span style={{fontSize: '0.9rem', color:'#666', fontWeight:'normal'}}>/mo</span></div>
-                        <ul style={{ listStyle: 'none', textAlign: 'left', fontSize: '0.9rem', color: '#666', marginBottom: '20px', lineHeight: '2' }}>
-                            <li>💎 <strong>First Dibs</strong> on ALL Requests</li>
-                            <li>💎 Unlimited 0% Fee</li>
-                            <li>💎 TikTok Live Support</li>
-                        </ul>
-                        <button 
-                            onClick={() => handleCompleteSetup('Diamond')}
-                            className="btn-primary"
-                            style={{ width: '100%', padding: '12px', background: '#00c3ff', border: 'none' }}
-                            disabled={isSaving}
-                        >
-                            Select Diamond
-                        </button>
+                    {/* Selling Preferences */}
+                    <div style={{ borderTop: '1px solid #ddd', paddingTop: '20px', marginBottom: '20px' }}>
+                        <h3 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.25rem)', marginBottom: '10px', color: '#0070f3' }}>Selling Preferences</h3>
+                        <div style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)', lineHeight: '1.8' }}>
+                            <div><strong>Countries:</strong> {formData.focusCountries.join(', ')}</div>
+                            <div><strong>Categories:</strong> {formData.categories.join(', ')}</div>
+                            {formData.bio && <div><strong>Bio:</strong> {formData.bio}</div>}
+                            {formData.instagram && <div><strong>Instagram:</strong> @{formData.instagram.replace('@', '')}</div>}
+                        </div>
                     </div>
                 </div>
-                
-                <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>Back</button>
+
+                <div style={{ background: '#e3f2fd', borderRadius: '12px', padding: 'clamp(15px, 4vw, 20px)', marginBottom: '30px', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>ℹ️ What happens next?</div>
+                    <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
+                        <li>You'll be added as a Standard (Free) seller</li>
+                        <li>Start browsing buyer requests immediately</li>
+                        <li>Build your reputation and unlock benefits</li>
+                        <li>You can update your profile anytime</li>
+                    </ul>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                    <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                        Back
+                    </button>
+                    <button
+                        onClick={handleCompleteSetup}
+                        className="btn-primary"
+                        disabled={isSaving}
+                        style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)', padding: 'clamp(12px, 3vw, 15px) clamp(30px, 8vw, 40px)' }}
+                    >
+                        {isSaving ? 'Creating Your Account...' : 'Complete Setup & Start Selling'}
+                    </button>
+                </div>
             </div>
         )}
 
