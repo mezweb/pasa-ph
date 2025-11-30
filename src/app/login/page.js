@@ -19,10 +19,23 @@ export default function LoginPage() {
     const docRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists() && docSnap.data().isProfileComplete) {
-      router.push('/');
+    if (docSnap.exists()) {
+      const userData = docSnap.data();
+
+      // If profile is complete, go to home
+      if (userData.isProfileComplete) {
+        router.push('/');
+      } else {
+        // If incomplete, redirect to appropriate onboarding
+        if (userData.role === 'Seller' || userData.isSeller) {
+          router.push('/start-selling');
+        } else {
+          router.push('/buyer-onboarding');
+        }
+      }
     } else {
-      router.push('/profile');
+      // No user document exists, redirect to buyer onboarding by default
+      router.push('/buyer-onboarding');
     }
   };
 

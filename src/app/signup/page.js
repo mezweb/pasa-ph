@@ -42,11 +42,11 @@ export default function SignupPage() {
         });
     }
 
-    // Redirect sellers to onboarding wizard
+    // Redirect to appropriate onboarding wizard
     if (selectedRole === 'seller') {
         router.push('/start-selling');
     } else {
-        router.push('/');
+        router.push('/buyer-onboarding');
     }
   };
 
