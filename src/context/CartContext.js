@@ -50,6 +50,33 @@ export function CartProvider({ children }) {
     setCart((prev) => prev.filter((item) => item.id !== productId));
   };
 
+  const updateQuantity = (productId, newQuantity) => {
+    if (newQuantity < 1) return; // Don't allow quantity less than 1
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  const increaseQuantity = (productId) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
+      )
+    );
+  };
+
+  const decreaseQuantity = (productId) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === productId && item.quantity > 1
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    );
+  };
+
   const clearCart = () => setCart([]);
 
   // --- SELLER ACTIONS ---
@@ -76,7 +103,7 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={{
-        cart, addToCart, removeFromCart, clearCart,
+        cart, addToCart, removeFromCart, updateQuantity, increaseQuantity, decreaseQuantity, clearCart,
         pasaBag, addToBag, removeFromBag, clearBag,
         viewMode, setViewMode, toggleViewMode,
         showCartPopup, setShowCartPopup

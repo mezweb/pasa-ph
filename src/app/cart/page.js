@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
-  const { cart, removeFromCart, clearCart, pasaBag, removeFromBag, clearBag, viewMode } = useCart();
+  const { cart, removeFromCart, increaseQuantity, decreaseQuantity, clearCart, pasaBag, removeFromBag, clearBag, viewMode } = useCart();
   const [user, setUser] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,7 +30,12 @@ export default function CartPage() {
   const removeFunc = isSellerMode ? removeFromBag : removeFromCart;
   const clearFunc = isSellerMode ? clearBag : clearCart;
 
-  const total = currentList.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Calculate fees for buyer cart
+  const subtotal = currentList.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingFee = isSellerMode ? 0 : 150; // Placeholder shipping fee
+  const taxRate = 0.12; // 12% VAT (placeholder)
+  const taxAmount = isSellerMode ? 0 : Math.round(subtotal * taxRate);
+  const total = isSellerMode ? subtotal : subtotal + shippingFee + taxAmount;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -188,21 +193,108 @@ export default function CartPage() {
         ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {currentList.map(item => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: 'clamp(12px, 3vw, 20px)', borderRadius: '8px', border: '1px solid #eee', flexWrap: 'wrap', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
-                            <div style={{ width: 'clamp(50px, 12vw, 60px)', height: 'clamp(50px, 12vw, 60px)', background: '#eee', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                                <img src={item.image || item.images?.[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div key={item.id} style={{ background: 'white', padding: 'clamp(12px, 3vw, 20px)', borderRadius: '8px', border: '1px solid #eee' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px', flexWrap: 'wrap' }}>
+                            {/* Image and Info */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
+                                <div style={{ width: 'clamp(60px, 12vw, 80px)', height: 'clamp(60px, 12vw, 80px)', background: '#f5f5f5', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+                                    <img src={item.image || item.images?.[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', wordBreak: 'break-word', marginBottom: '5px' }}>{item.title}</div>
+                                    <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#888', marginBottom: '8px' }}>₱{item.price.toLocaleString()} each</div>
+
+                                    {!isSellerMode && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                                            <span style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#666', fontWeight: '500' }}>Quantity:</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+                                                <button
+                                                    onClick={() => decreaseQuantity(item.id)}
+                                                    disabled={item.quantity <= 1}
+                                                    style={{
+                                                        background: item.quantity <= 1 ? '#f5f5f5' : 'white',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                                                        fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
+                                                        color: item.quantity <= 1 ? '#ccc' : '#333',
+                                                        fontWeight: 'bold',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseOver={(e) => item.quantity > 1 && (e.currentTarget.style.background = '#f5f5f5')}
+                                                    onMouseOut={(e) => item.quantity > 1 && (e.currentTarget.style.background = 'white')}
+                                                >
+                                                    −
+                                                </button>
+                                                <span style={{
+                                                    padding: '6px 16px',
+                                                    borderLeft: '1px solid #ddd',
+                                                    borderRight: '1px solid #ddd',
+                                                    fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+                                                    fontWeight: 'bold',
+                                                    minWidth: '40px',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {item.quantity}
+                                                </span>
+                                                <button
+                                                    onClick={() => increaseQuantity(item.id)}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        cursor: 'pointer',
+                                                        fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
+                                                        color: '#333',
+                                                        fontWeight: 'bold',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isSellerMode && (
+                                        <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#2e7d32' }}>Earnings: ₱{(item.price * 0.15).toFixed(0)} (Service Fee)</div>
+                                    )}
+                                </div>
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', wordBreak: 'break-word' }}>{item.title}</div>
-                                {isSellerMode ? (
-                                    <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#2e7d32' }}>Earnings: ₱{(item.price * 0.15).toFixed(0)} (Service Fee)</div>
-                                ) : (
-                                    <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: '#666' }}>₱{item.price} x {item.quantity}</div>
-                                )}
+
+                            {/* Price and Remove */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                                <div style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', fontWeight: 'bold', color: '#0070f3' }}>
+                                    ₱{(item.price * item.quantity).toLocaleString()}
+                                </div>
+                                <button
+                                    onClick={() => removeFunc(item.id)}
+                                    style={{
+                                        color: '#ef5350',
+                                        background: 'none',
+                                        border: '1px solid #ef5350',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: 'clamp(0.8rem, 2vw, 0.85rem)',
+                                        padding: '6px 12px',
+                                        transition: 'all 0.2s',
+                                        fontWeight: '500'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = '#ef5350';
+                                        e.currentTarget.style.color = 'white';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'none';
+                                        e.currentTarget.style.color = '#ef5350';
+                                    }}
+                                >
+                                    Remove
+                                </button>
                             </div>
                         </div>
-                        <button onClick={() => removeFunc(item.id)} style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'clamp(0.85rem, 2vw, 0.95rem)', padding: '5px 10px' }}>Remove</button>
                     </div>
                 ))}
 
@@ -248,14 +340,60 @@ export default function CartPage() {
                     </div>
                 )}
 
-                <div style={{ marginTop: '20px', padding: 'clamp(15px, 4vw, 20px)', background: '#f0f9ff', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-                    <div style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', fontWeight: 'bold', flex: 1 }}>
-                        {isSellerMode ? 'Total Potential Earnings:' : 'Total:'}
-                        <span style={{ color: '#0070f3', marginLeft: '10px', display: 'block' }}>
-                            ₱{isSellerMode ? (total * 0.15).toFixed(0) : total}
-                        </span>
+                {/* Order Summary / Fee Breakdown */}
+                <div style={{ marginTop: '20px', padding: 'clamp(15px, 4vw, 20px)', background: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
+                    <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 'bold' }}>
+                        {isSellerMode ? 'Earnings Summary' : 'Order Summary'}
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Subtotal */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                            <span style={{ color: '#666' }}>Subtotal ({currentList.reduce((sum, item) => sum + item.quantity, 0)} {currentList.reduce((sum, item) => sum + item.quantity, 0) === 1 ? 'item' : 'items'})</span>
+                            <span style={{ fontWeight: '500' }}>₱{subtotal.toLocaleString()}</span>
+                        </div>
+
+                        {!isSellerMode && (
+                            <>
+                                {/* Shipping Fee */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                    <span style={{ color: '#666' }}>Shipping Fee</span>
+                                    <span style={{ fontWeight: '500' }}>₱{shippingFee.toLocaleString()}</span>
+                                </div>
+
+                                {/* Tax/VAT */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                    <span style={{ color: '#666' }}>Tax (VAT 12%)</span>
+                                    <span style={{ fontWeight: '500' }}>₱{taxAmount.toLocaleString()}</span>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Divider */}
+                        <div style={{ borderTop: '2px solid #eee', marginTop: '8px', paddingTop: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: 'clamp(1.1rem, 3vw, 1.3rem)', fontWeight: 'bold' }}>
+                                    {isSellerMode ? 'Total Earnings:' : 'Total:'}
+                                </span>
+                                <span style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', fontWeight: 'bold', color: '#0070f3' }}>
+                                    ₱{isSellerMode ? (subtotal * 0.15).toFixed(0) : total.toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <button onClick={handleCheckout} className="btn-primary" disabled={isProcessing} style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', padding: 'clamp(10px, 3vw, 12px) clamp(20px, 5vw, 24px)' }}>
+
+                    {/* Checkout Button */}
+                    <button
+                        onClick={handleCheckout}
+                        className="btn-primary"
+                        disabled={isProcessing}
+                        style={{
+                            width: '100%',
+                            marginTop: '20px',
+                            fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)',
+                            padding: 'clamp(12px, 3vw, 14px) clamp(20px, 5vw, 24px)'
+                        }}
+                    >
                         {isProcessing ? 'Processing...' : (isSellerMode ? 'Confirm Fulfillment' : 'Proceed to Payment')}
                     </button>
                 </div>
