@@ -11,13 +11,14 @@ import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
-  const [isSellerAccount, setIsSellerAccount] = useState(false); 
-  const { cart, pasaBag, viewMode, toggleViewMode } = useCart(); 
+  const [isSellerAccount, setIsSellerAccount] = useState(false);
+  const { cart, pasaBag, viewMode, toggleViewMode } = useCart();
   const isSellerMode = viewMode === 'seller';
   const router = useRouter();
 
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -53,14 +54,25 @@ export default function Navbar() {
   const itemCount = (!user || !isSellerMode) ? cart.length : pasaBag.length;
 
   return (
-    <nav style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 50, padding: '0.8rem 0' }}>
-      <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0070f3', letterSpacing: '-0.5px' }}>
+    <nav style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 50, padding: 'clamp(0.6rem, 2vw, 0.8rem) 0' }}>
+      <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+        <Link href="/" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: '800', color: '#0070f3', letterSpacing: '-0.5px' }}>
           📦 Pasa.ph
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          
-          <div style={{ display: 'flex', gap: '20px', fontWeight: '500', color: '#666', fontSize: '0.9rem', alignItems: 'center' }}>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{ display: 'none', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '8px' }}
+          className="mobile-menu-btn"
+        >
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+
+        {/* Desktop Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 20px)' }} className="desktop-nav">
+
+          <div style={{ display: 'flex', gap: 'clamp(12px, 3vw, 20px)', fontWeight: '500', color: '#666', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', alignItems: 'center' }}>
             
             {/* --- LOGGED OUT STATE (NEUTRAL) --- */}
             {!user ? (
@@ -194,7 +206,82 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            background: 'white',
+            borderBottom: '1px solid #eaeaea',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            padding: '20px',
+            display: 'none'
+          }} className="mobile-nav">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '1rem' }}>
+              {!user ? (
+                <>
+                  <Link href="/shop" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Shop</Link>
+                  <Link href="/offers" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Sellers</Link>
+                  <Link href="/how-it-works" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>How it Works</Link>
+                  <Link href="/support" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Support</Link>
+                  <Link href="/start-selling" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', color: '#2e7d32', fontWeight: 'bold', borderBottom: '1px solid #f0f0f0' }}>Start Selling</Link>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary" style={{ marginTop: '10px', textAlign: 'center' }}>Login</Link>
+                </>
+              ) : isSellerMode ? (
+                <>
+                  <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Marketplace</Link>
+                  <Link href="/buyers" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Buyers</Link>
+                  <Link href="/seller-dashboard" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', color: '#0070f3', fontWeight: 'bold', borderBottom: '1px solid #f0f0f0' }}>Dashboard</Link>
+                  <Link href="/support" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Support</Link>
+                  <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>My Profile</Link>
+                  {isSellerAccount && (
+                    <button onClick={() => { toggleMode(); setIsMobileMenuOpen(false); }} style={{ padding: '10px 0', textAlign: 'left', background: 'none', border: 'none', color: '#0070f3', fontSize: '1rem', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>
+                      Switch to Buying
+                    </button>
+                  )}
+                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} style={{ padding: '10px', background: '#ff4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '10px' }}>Logout</button>
+                </>
+              ) : (
+                <>
+                  <Link href="/shop" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Shop</Link>
+                  <Link href="/offers" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Sellers</Link>
+                  <Link href="/how-it-works" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>How it Works</Link>
+                  <Link href="/support" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>Support</Link>
+                  <Link href="/buyer-dashboard" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', color: '#0070f3', fontWeight: 'bold', borderBottom: '1px solid #f0f0f0' }}>Dashboard</Link>
+                  {!isSellerAccount && (
+                    <Link href="/start-selling" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', color: '#2e7d32', fontWeight: 'bold', borderBottom: '1px solid #f0f0f0' }}>Start Selling</Link>
+                  )}
+                  <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>My Profile</Link>
+                  {isSellerAccount && (
+                    <button onClick={() => { toggleMode(); setIsMobileMenuOpen(false); }} style={{ padding: '10px 0', textAlign: 'left', background: 'none', border: 'none', color: '#0070f3', fontSize: '1rem', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>
+                      Switch to Selling
+                    </button>
+                  )}
+                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} style={{ padding: '10px', background: '#ff4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '10px' }}>Logout</button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* CSS for responsive navbar */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .desktop-nav {
+            display: none !important;
+          }
+          .mobile-menu-btn {
+            display: block !important;
+          }
+          .mobile-nav {
+            display: block !important;
+          }
+        }
+      `}</style>
     </nav>
   );
 }
