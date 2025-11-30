@@ -58,6 +58,9 @@ export default function SellerProfilePage() {
   const [hoverRating, setHoverRating] = useState(0);
   const [newReview, setNewReview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
+  const [filterRating, setFilterRating] = useState('all');
 
   // Check auth status
   useEffect(() => {
@@ -112,29 +115,69 @@ export default function SellerProfilePage() {
     setIsSubmitting(true);
 
     try {
-      await addDoc(collection(db, 'reviews'), {
+      const newReviewData = {
         sellerId: sellerName,
         userId: user.uid,
         userName: user.displayName || user.email.split('@')[0],
         rating: newRating,
         comment: newReview.trim(),
         createdAt: serverTimestamp()
-      });
+      };
+
+      await addDoc(collection(db, 'reviews'), newReviewData);
+
+      // Add review to state immediately with current timestamp
+      const tempReview = {
+        id: Date.now().toString(),
+        ...newReviewData,
+        createdAt: { toDate: () => new Date() }
+      };
+      setReviews(prev => [tempReview, ...prev]);
 
       // Reset form
       setNewRating(0);
       setNewReview('');
 
-      // Reload reviews
-      await loadReviews();
+      // Show confirmation popup
+      setShowConfirmation(true);
+      setTimeout(() => setShowConfirmation(false), 3000);
 
-      alert('Review submitted successfully!');
+      // Reload reviews to get actual data from Firebase
+      await loadReviews();
     } catch (error) {
       console.error('Error submitting review:', error);
       alert('Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Filter and sort reviews
+  const getFilteredAndSortedReviews = () => {
+    let filtered = reviews;
+
+    // Filter by rating
+    if (filterRating !== 'all') {
+      filtered = filtered.filter(review => review.rating === parseInt(filterRating));
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return b.createdAt?.toDate() - a.createdAt?.toDate() || 0;
+        case 'oldest':
+          return a.createdAt?.toDate() - b.createdAt?.toDate() || 0;
+        case 'highest':
+          return b.rating - a.rating;
+        case 'lowest':
+          return a.rating - b.rating;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
   };
 
   const getProductLink = (title) => {
@@ -333,9 +376,56 @@ export default function SellerProfilePage() {
 
                 {/* Existing Reviews */}
                 <div>
-                    <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.2rem)', marginBottom: '20px' }}>
-                        Customer Reviews ({reviews.length})
-                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+                        <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.2rem)', margin: 0 }}>
+                            Customer Reviews ({reviews.length})
+                        </h3>
+
+                        {/* Sort and Filter Controls */}
+                        {reviews.length > 0 && (
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                {/* Sort Dropdown */}
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #ddd',
+                                        fontSize: 'clamp(0.85rem, 2vw, 0.9rem)',
+                                        cursor: 'pointer',
+                                        outline: 'none'
+                                    }}
+                                >
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="highest">Highest Rated</option>
+                                    <option value="lowest">Lowest Rated</option>
+                                </select>
+
+                                {/* Filter Dropdown */}
+                                <select
+                                    value={filterRating}
+                                    onChange={(e) => setFilterRating(e.target.value)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #ddd',
+                                        fontSize: 'clamp(0.85rem, 2vw, 0.9rem)',
+                                        cursor: 'pointer',
+                                        outline: 'none'
+                                    }}
+                                >
+                                    <option value="all">All Ratings</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                                    <option value="3">⭐⭐⭐ 3 Stars</option>
+                                    <option value="2">⭐⭐ 2 Stars</option>
+                                    <option value="1">⭐ 1 Star</option>
+                                </select>
+                            </div>
+                        )}
+                    </div>
 
                     {reviews.length === 0 ? (
                         <div style={{ background: 'white', padding: '40px', textAlign: 'center', borderRadius: '12px', border: '1px solid #eaeaea' }}>
@@ -346,7 +436,7 @@ export default function SellerProfilePage() {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            {reviews.map((review) => (
+                            {getFilteredAndSortedReviews().map((review) => (
                                 <div
                                     key={review.id}
                                     style={{
@@ -394,6 +484,49 @@ export default function SellerProfilePage() {
 
         </div>
       </div>
+
+      {/* Confirmation Popup */}
+      {showConfirmation && (
+        <div style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          background: '#2e7d32',
+          color: 'white',
+          padding: 'clamp(15px, 3vw, 20px) clamp(20px, 4vw, 30px)',
+          borderRadius: '12px',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+          zIndex: 10000,
+          animation: 'slideInUp 0.3s ease-out',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          maxWidth: '90vw'
+        }}>
+          <span style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>✓</span>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', marginBottom: '3px' }}>
+              Review Submitted!
+            </div>
+            <div style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', opacity: 0.9 }}>
+              Thank you for your feedback
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
 
       <Footer />
     </>
