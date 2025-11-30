@@ -1,54 +1,34 @@
 export const POPULAR_PRODUCTS = [
   // --- FOOD ---
-  { 
-    id: 'p1', 
-    title: 'Tokyo Banana', 
-    category: 'Food', 
-    // Changed 'image' to 'images' array
+  {
+    id: 'p1',
+    title: 'Premium Confectionery',
+    category: 'Food',
     images: [
-        'https://placehold.co/600x600/ffeeba/856404?text=Tokyo+Banana+1',
-        'https://placehold.co/600x600/ffeeba/856404?text=Tokyo+Banana+2',
-        'https://placehold.co/600x600/ffeeba/856404?text=Tokyo+Banana+3'
+        'https://placehold.co/600x600/fff3e0/e65100?text=Japanese+Chocolates+1',
+        'https://placehold.co/600x600/fff3e0/e65100?text=Japanese+Snacks+2',
+        'https://placehold.co/600x600/fff3e0/e65100?text=Japanese+Sweets+3'
     ],
-    from: 'Japan', 
-    requests: 45, 
-    sellers: 12, 
-    isHot: true, 
-    price: 800,
+    from: 'Japan',
+    requests: 45,
+    sellers: 12,
+    isHot: true,
+    price: 75,
     estimatedDelivery: '3-5 Days',
-    topSellers: ['KikoJapz', 'TokyoTreats', 'PasabuyMnl'] 
+    topSellers: ['KikoJapz', 'TokyoTreats', 'PasabuyMnl']
   },
-  { 
-    id: 'p2', 
-    title: 'Royce Chocolate', 
-    category: 'Food', 
-    // Changed 'image' to 'images' array
-    images: [
-        'https://placehold.co/600x600/3e2723/ffffff?text=Royce+1',
-        'https://placehold.co/600x600/3e2723/ffffff?text=Royce+2',
-        'https://placehold.co/600x600/3e2723/ffffff?text=Royce+3'
-    ],
-    from: 'Japan', 
-    requests: 82, 
-    sellers: 20, 
-    isHot: true, 
-    price: 950,
-    estimatedDelivery: '2-4 Days',
-    topSellers: ['SweetToothPH', 'JapanGoodies'] 
-  },
-  // ... (Update other products similarly or they will use their single 'image' property as a fallback in the UI)
-  { 
-    id: 'p3', 
-    title: 'Irvins Salted Egg', 
-    category: 'Food', 
-    image: 'https://placehold.co/400x400/ffeb3b/000000?text=Irvins', 
-    from: 'Singapore', 
-    requests: 30, 
-    sellers: 8, 
-    isHot: false, 
+  {
+    id: 'p3',
+    title: 'Irvins Salted Egg',
+    category: 'Food',
+    image: 'https://placehold.co/400x400/ffeb3b/000000?text=Irvins',
+    from: 'Singapore',
+    requests: 30,
+    sellers: 8,
+    isHot: false,
     price: 650,
     estimatedDelivery: '5-7 Days',
-    topSellers: ['SG_Finds', 'LionCityShopper'] 
+    topSellers: ['SG_Finds', 'LionCityShopper']
   },
   { id: 'p4', title: 'Trader Joes Speculoos', category: 'Food', image: 'https://placehold.co/400x400/d32f2f/ffffff?text=Speculoos', from: 'USA', requests: 25, sellers: 5, isHot: false, price: 500, estimatedDelivery: '10-14 Days', topSellers: ['USADirect'] },
   { id: 'p5', title: 'Jenny Bakery Cookies', category: 'Food', image: 'https://placehold.co/400x400/fafafa/333?text=Jenny+Bakery', from: 'Hong Kong', requests: 15, sellers: 3, isHot: false, price: 1800, estimatedDelivery: '4-6 Days', topSellers: ['HK_Treats'] },
@@ -74,7 +54,87 @@ export const POPULAR_PRODUCTS = [
   },
   { id: 'p7', title: 'The Ordinary Set', category: 'Beauty', image: 'https://placehold.co/400x400/ffffff/000?text=The+Ordinary', from: 'USA', requests: 55, sellers: 10, isHot: true, price: 2200, estimatedDelivery: '10-12 Days', topSellers: ['SkincareJunkie'] },
   { id: 'p8', title: 'Laneige Lip Mask', category: 'Beauty', image: 'https://placehold.co/400x400/f48fb1/ffffff?text=Laneige', from: 'South Korea', requests: 40, sellers: 18, isHot: false, price: 850, estimatedDelivery: '5-8 Days', topSellers: ['K_BeautyHub'] },
-  { id: 'p9', title: 'Melano CC', category: 'Beauty', image: 'https://placehold.co/400x400/fff176/fbc02d?text=Melano+CC', from: 'Japan', requests: 35, sellers: 22, isHot: false, price: 700, estimatedDelivery: '3-5 Days', topSellers: ['JapanSkincare'] },
+  {
+    id: 'p9',
+    title: 'Melano CC Premium',
+    category: 'Beauty',
+    images: [
+        'https://placehold.co/600x600/fff176/fbc02d?text=Melano+CC+1',
+        'https://placehold.co/600x600/fff176/fbc02d?text=Melano+CC+2',
+        'https://placehold.co/600x600/fff176/fbc02d?text=Melano+CC+3'
+    ],
+    from: 'Japan',
+    requests: 35,
+    sellers: 22,
+    isHot: false,
+    price: 750,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['JapanSkincare', 'BeautyMnl']
+  },
+  {
+    id: 'p9a',
+    title: 'Anessa UV Milk',
+    category: 'Beauty',
+    images: [
+        'https://placehold.co/600x600/4fc3f7/ffffff?text=Anessa+1',
+        'https://placehold.co/600x600/4fc3f7/ffffff?text=Anessa+2'
+    ],
+    from: 'Japan',
+    requests: 28,
+    sellers: 15,
+    isHot: true,
+    price: 1350,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['JapanSkincare', 'SunCarePH']
+  },
+  {
+    id: 'p9b',
+    title: 'Canmake Cosmetics',
+    category: 'Beauty',
+    images: [
+        'https://placehold.co/600x600/fce4ec/c2185b?text=Canmake+1',
+        'https://placehold.co/600x600/fce4ec/c2185b?text=Canmake+2'
+    ],
+    from: 'Japan',
+    requests: 42,
+    sellers: 18,
+    isHot: false,
+    price: 600,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['JapanMakeup', 'KawaiiBeauty']
+  },
+  {
+    id: 'p9c',
+    title: 'Fino / Tsubaki Hair Mask',
+    category: 'Beauty',
+    images: [
+        'https://placehold.co/600x600/fff9c4/f57f17?text=Hair+Mask+1',
+        'https://placehold.co/600x600/fff9c4/f57f17?text=Hair+Mask+2'
+    ],
+    from: 'Japan',
+    requests: 30,
+    sellers: 12,
+    isHot: false,
+    price: 450,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['JapanHairCare', 'BeautyEssentials']
+  },
+  {
+    id: 'p9d',
+    title: 'DHC Collagen (60 Days)',
+    category: 'Beauty',
+    images: [
+        'https://placehold.co/600x600/ffebee/c62828?text=DHC+1',
+        'https://placehold.co/600x600/ffebee/c62828?text=DHC+2'
+    ],
+    from: 'Japan',
+    requests: 38,
+    sellers: 16,
+    isHot: true,
+    price: 850,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['SupplementsPH', 'HealthJapan']
+  },
   { id: 'p10', title: 'Ellips Hair Vitamins', category: 'Beauty', image: 'https://placehold.co/400x400/e91e63/ffffff?text=Ellips', from: 'Indonesia', requests: 20, sellers: 5, isHot: false, price: 450, estimatedDelivery: '7-10 Days', topSellers: ['IndoGlow'] },
 
   // --- ELECTRONICS ---
@@ -97,9 +157,76 @@ export const POPULAR_PRODUCTS = [
     topSellers: ['AppleTrust'] 
   },
   { id: 'p12', title: 'Kindle Paperwhite', category: 'Electronics', image: 'https://placehold.co/400x400/000000/ffffff?text=Kindle', from: 'USA', requests: 45, sellers: 6, isHot: true, price: 8000, estimatedDelivery: '10-15 Days', topSellers: ['TechReader'] },
-  { id: 'p13', title: 'Fujifilm Instax', category: 'Electronics', image: 'https://placehold.co/400x400/81d4fa/ffffff?text=Instax', from: 'Japan', requests: 30, sellers: 8, isHot: false, price: 4500, estimatedDelivery: '5-7 Days', topSellers: ['CamGeek'] },
-  { id: 'p14', title: 'Sony Headphones', category: 'Electronics', image: 'https://placehold.co/400x400/333/fff?text=Sony+XM5', from: 'Japan', requests: 25, sellers: 5, isHot: false, price: 18000, estimatedDelivery: '5-7 Days', topSellers: ['AudioPhileJP'] },
-  { id: 'p15', title: 'Nintendo Switch OLED', category: 'Electronics', image: 'https://placehold.co/400x400/d50000/ffffff?text=Switch', from: 'Japan', requests: 60, sellers: 10, isHot: true, price: 15000, estimatedDelivery: '5-7 Days', topSellers: ['GameStopProxy'] },
+  {
+    id: 'p13',
+    title: 'Instax Film (20s Twin Pack)',
+    category: 'Electronics',
+    images: [
+        'https://placehold.co/600x600/81d4fa/ffffff?text=Instax+Film+1',
+        'https://placehold.co/600x600/81d4fa/ffffff?text=Instax+Film+2'
+    ],
+    from: 'Japan',
+    requests: 30,
+    sellers: 8,
+    isHot: false,
+    price: 950,
+    estimatedDelivery: '5-7 Days',
+    topSellers: ['CamGeek', 'PhotoSupplies']
+  },
+
+  // --- CLOTHING ---
+  {
+    id: 'p14',
+    title: 'Onitsuka Tiger Mexico 66',
+    category: 'Clothing',
+    images: [
+        'https://placehold.co/600x600/ffffff/1565c0?text=Onitsuka+Tiger+1',
+        'https://placehold.co/600x600/ffffff/1565c0?text=Onitsuka+Tiger+2',
+        'https://placehold.co/600x600/ffffff/1565c0?text=Onitsuka+Tiger+3'
+    ],
+    from: 'Japan',
+    requests: 52,
+    sellers: 10,
+    isHot: true,
+    price: 7500,
+    estimatedDelivery: '5-7 Days',
+    topSellers: ['SneakerHeadPH', 'JapanFashion']
+  },
+
+  // --- OTHER ---
+  {
+    id: 'p15',
+    title: 'Issey Miyake Bao Bao',
+    category: 'Other',
+    images: [
+        'https://placehold.co/600x600/212121/ffffff?text=Issey+Miyake+1',
+        'https://placehold.co/600x600/212121/ffffff?text=Issey+Miyake+2',
+        'https://placehold.co/600x600/212121/ffffff?text=Issey+Miyake+3'
+    ],
+    from: 'Japan',
+    requests: 18,
+    sellers: 6,
+    isHot: false,
+    price: 22500,
+    estimatedDelivery: '7-10 Days',
+    topSellers: ['LuxuryJP', 'DesignerBagsPH']
+  },
+  {
+    id: 'p15a',
+    title: 'Rohto Eye Drops',
+    category: 'Other',
+    images: [
+        'https://placehold.co/600x600/e3f2fd/0277bd?text=Rohto+1',
+        'https://placehold.co/600x600/e3f2fd/0277bd?text=Rohto+2'
+    ],
+    from: 'Japan',
+    requests: 44,
+    sellers: 20,
+    isHot: false,
+    price: 250,
+    estimatedDelivery: '3-5 Days',
+    topSellers: ['PharmaPH', 'JapanHealth']
+  },
 
   // --- LOCAL (Bulacan/Pampanga) ---
   { 
