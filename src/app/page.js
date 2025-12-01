@@ -28,6 +28,7 @@ export default function Home() {
   const [sellerCategory, setSellerCategory] = useState('All');
   const { addToCart, viewMode } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState('items'); // 'items' or 'travelers'
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -122,20 +123,124 @@ export default function Home() {
       {/* --- SEARCH BAR --- */}
       <div style={{ background: '#f8f9fa', padding: '40px 20px', borderBottom: '1px solid #eaeaea' }}>
         <div className="container" style={{ maxWidth: '800px', textAlign: 'center' }}>
+            {/* Search Mode Toggle */}
+            <div style={{ display: 'inline-flex', background: 'white', borderRadius: '30px', padding: '4px', marginBottom: '25px', border: '1px solid #ddd' }}>
+                <button
+                    onClick={() => setSearchMode('items')}
+                    style={{
+                        padding: '8px 24px',
+                        borderRadius: '30px',
+                        border: 'none',
+                        background: searchMode === 'items' ? '#0070f3' : 'transparent',
+                        color: searchMode === 'items' ? 'white' : '#666',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontSize: '0.9rem'
+                    }}
+                >
+                    🛍️ Find Items
+                </button>
+                <button
+                    onClick={() => setSearchMode('travelers')}
+                    style={{
+                        padding: '8px 24px',
+                        borderRadius: '30px',
+                        border: 'none',
+                        background: searchMode === 'travelers' ? '#0070f3' : 'transparent',
+                        color: searchMode === 'travelers' ? 'white' : '#666',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontSize: '0.9rem'
+                    }}
+                >
+                    ✈️ Find a Traveler
+                </button>
+            </div>
+
             <h2 style={{ fontSize: '2rem', marginBottom: '20px', fontWeight: '400' }}>
-                You're one search away from your <span style={{ fontWeight: '800' }}>favorite item</span>
+                {searchMode === 'items' ? (
+                    <>You're one search away from your <span style={{ fontWeight: '800' }}>favorite item</span></>
+                ) : (
+                    <>Find travelers coming from <span style={{ fontWeight: '800' }}>your destination</span></>
+                )}
             </h2>
             <div style={{ display: 'flex', background: 'white', borderRadius: '50px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #eaeaea', maxWidth: '700px', margin: '0 auto' }}>
-                <input type="text" placeholder="Search items (e.g. Tokyo Banana, iPhone, Glossier)..." style={{ flex: 1, padding: '15px 25px', border: 'none', fontSize: '1rem', outline: 'none' }} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); if(e.target.value.length === 1) document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }} />
-                <button onClick={() => document.getElementById('shop').scrollIntoView({behavior: 'smooth'})} style={{ background: 'black', color: 'white', border: 'none', padding: '0 30px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>Search &rarr;</button>
+                <input
+                    type="text"
+                    placeholder={searchMode === 'items' ? "Search items (e.g. Tokyo Banana, iPhone, Glossier)..." : "Search by country or traveler (e.g. Japan, Tokyo, next week)..."}
+                    style={{ flex: 1, padding: '15px 25px', border: 'none', fontSize: '1rem', outline: 'none' }}
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); if(e.target.value.length === 1) document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }}
+                />
+                <button
+                    onClick={() => {
+                        if (searchMode === 'travelers') {
+                            router.push('/offers');
+                        } else {
+                            document.getElementById('shop').scrollIntoView({behavior: 'smooth'});
+                        }
+                    }}
+                    style={{ background: 'black', color: 'white', border: 'none', padding: '0 30px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    Search &rarr;
+                </button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
-                {['Food', 'Beauty', 'Electronics', 'Japan', 'USA'].map(tag => (
-                    <button key={tag} onClick={() => { setCategory(tag === 'Japan' || tag === 'USA' ? 'All' : tag); setSearchQuery(tag === 'Japan' || tag === 'USA' ? tag : ''); document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }} style={{ background: 'white', border: '1px solid #ddd', borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem', color: '#666', cursor: 'pointer', transition: '0.2s' }} onMouseOver={(e) => e.target.style.borderColor = '#000'} onMouseOut={(e) => e.target.style.borderColor = '#ddd'}>{tag}</button>
-                ))}
+                {searchMode === 'items' ? (
+                    ['Food', 'Beauty', 'Electronics', 'Japan', 'USA'].map(tag => (
+                        <button key={tag} onClick={() => { setCategory(tag === 'Japan' || tag === 'USA' ? 'All' : tag); setSearchQuery(tag === 'Japan' || tag === 'USA' ? tag : ''); document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }} style={{ background: 'white', border: '1px solid #ddd', borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem', color: '#666', cursor: 'pointer', transition: '0.2s' }} onMouseOver={(e) => e.target.style.borderColor = '#000'} onMouseOut={(e) => e.target.style.borderColor = '#ddd'}>{tag}</button>
+                    ))
+                ) : (
+                    ['Japan', 'USA', 'South Korea', 'Singapore', 'This Week'].map(tag => (
+                        <button key={tag} onClick={() => router.push('/offers')} style={{ background: 'white', border: '1px solid #ddd', borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem', color: '#666', cursor: 'pointer', transition: '0.2s' }} onMouseOver={(e) => e.target.style.borderColor = '#000'} onMouseOut={(e) => e.target.style.borderColor = '#ddd'}>{tag}</button>
+                    ))
+                )}
             </div>
         </div>
       </div>
+
+      {/* SELLER ACTIVATION TEASER */}
+      {!isLoggedIn && (
+        <div style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '30px 20px', borderBottom: '2px solid #1b5e20' }}>
+          <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '250px' }}>
+              <h3 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '800', margin: '0 0 8px' }}>
+                ✈️ Flying Soon?
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1rem', margin: 0 }}>
+                Offset your flight costs. See how much you can earn delivering items.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.15)', padding: '12px 20px', borderRadius: '8px', backdropFilter: 'blur(10px)' }}>
+                <div style={{ color: 'white', fontSize: '1.8rem', fontWeight: '900' }}>₱5,000+</div>
+                <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}>Avg. per trip</div>
+              </div>
+              <Link href="/start-selling" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  background: 'white',
+                  color: '#2e7d32',
+                  border: 'none',
+                  padding: '12px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Calculate My Earnings →
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SHOP SECTION */}
       <div id="shop" className="container" style={{ padding: '40px 20px' }}>
@@ -190,10 +295,64 @@ export default function Home() {
             </div>
         </div>
 
-        {/* VIEW ALL LINK HEADER */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-             <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Trending Items</h2>
-             <Link href="/shop" style={{ fontSize: '0.9rem', color: '#0070f3', fontWeight: '600' }}>View All Products &rarr;</Link>
+        {/* LOGISTICS-BASED COLLECTIONS TABS */}
+        <div style={{ marginBottom: '30px' }}>
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px', borderBottom: '2px solid #eee' }}>
+            <button
+              onClick={() => setCategory('All')}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: category === 'All' ? '#0070f3' : '#f5f5f5',
+                color: category === 'All' ? 'white' : '#333',
+                fontWeight: '700',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
+              }}
+            >
+              🔥 Viral Tokyo Snacks
+            </button>
+            <button
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#f5f5f5',
+                color: '#333',
+                fontWeight: '700',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⏰ Arriving Next Week (Pre-order)
+            </button>
+            <button
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#f5f5f5',
+                color: '#333',
+                fontWeight: '700',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ✅ Verified On-Hand (No Waiting)
+            </button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Collection</h3>
+              <h2 style={{ margin: '5px 0 0', fontSize: '1.8rem', fontWeight: '800' }}>🔥 Viral Tokyo Snacks</h2>
+            </div>
+            <Link href="/shop" style={{ fontSize: '0.9rem', color: '#0070f3', fontWeight: '600' }}>View All &rarr;</Link>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px', marginBottom: '60px' }}>
