@@ -20,6 +20,16 @@ export default function Navbar() {
   const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Mock notifications data (can be replaced with real data from Firebase later)
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'Your order from Tokyo has been shipped!', time: '2 hours ago', unread: true },
+    { id: 2, message: 'New seller available for your request', time: '1 day ago', unread: true },
+    { id: 3, message: 'Payment confirmed for Order #1234', time: '2 days ago', unread: false }
+  ]);
+
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -196,19 +206,151 @@ export default function Navbar() {
 
             {/* NOTIFICATION BELL ICON */}
             {user && (
-              <Link href="/notifications" style={{ position: 'relative', fontSize: '1.2rem' }}>
-                🔔
-                <span style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-5px',
-                  background: '#ff4d4f',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  border: '2px solid white'
-                }}></span>
-              </Link>
+              <div
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setShowNotifications(true)}
+                onMouseLeave={() => setShowNotifications(false)}
+              >
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    fontSize: '1.2rem',
+                    padding: '5px'
+                  }}
+                >
+                  🔔
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '3px',
+                      right: '3px',
+                      background: '#ff4d4f',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      border: '2px solid white'
+                    }}></span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid #eaeaea',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    width: '320px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    zIndex: 100,
+                    marginTop: '8px'
+                  }}>
+                    <div style={{
+                      padding: '12px 15px',
+                      borderBottom: '1px solid #eee',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>Notifications</span>
+                      {unreadCount > 0 && (
+                        <span style={{
+                          background: '#ff4d4f',
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          fontWeight: 'bold'
+                        }}>
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 ? (
+                      <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        {notifications.map(notification => (
+                          <div
+                            key={notification.id}
+                            onClick={() => {
+                              // Mark as read when clicked
+                              setNotifications(notifications.map(n =>
+                                n.id === notification.id ? { ...n, unread: false } : n
+                              ));
+                            }}
+                            style={{
+                              padding: '12px 15px',
+                              borderBottom: '1px solid #f5f5f5',
+                              cursor: 'pointer',
+                              background: notification.unread ? '#f0f8ff' : 'white',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#f9f9f9'}
+                            onMouseOut={(e) => e.currentTarget.style.background = notification.unread ? '#f0f8ff' : 'white'}
+                          >
+                            <div style={{
+                              fontSize: '0.85rem',
+                              color: '#333',
+                              marginBottom: '4px',
+                              fontWeight: notification.unread ? '600' : 'normal'
+                            }}>
+                              {notification.message}
+                            </div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#999'
+                            }}>
+                              {notification.time}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{
+                        padding: '40px 20px',
+                        textAlign: 'center',
+                        color: '#999',
+                        fontSize: '0.9rem'
+                      }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔕</div>
+                        <div>No notifications</div>
+                      </div>
+                    )}
+
+                    {notifications.length > 0 && (
+                      <div style={{
+                        padding: '10px 15px',
+                        borderTop: '1px solid #eee',
+                        textAlign: 'center'
+                      }}>
+                        <button
+                          onClick={() => setNotifications(notifications.map(n => ({ ...n, unread: false })))}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#0070f3',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            padding: '5px'
+                          }}
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* CART ICON */}
