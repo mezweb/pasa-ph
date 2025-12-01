@@ -22,6 +22,28 @@ const COUNTRY_DATA = {
   'Vietnam': { flag: '🇻🇳' }
 };
 
+// Popular search suggestions with trending badges
+const SEARCH_SUGGESTIONS = [
+  { term: 'Chocolates', category: 'Food', trending: true },
+  { term: 'iPhone', category: 'Electronics', trending: true },
+  { term: 'Glossier', category: 'Beauty', trending: false },
+  { term: 'Skincare', category: 'Beauty', trending: true },
+  { term: 'Snacks', category: 'Food', trending: false },
+  { term: 'Tokyo Banana', category: 'Food', trending: false },
+  { term: 'Melano CC', category: 'Beauty', trending: true },
+  { term: 'Korean Beauty', category: 'Beauty', trending: false },
+  { term: 'Office Snacks', category: 'Food', trending: false },
+  { term: 'Pasalubong', category: 'Food', trending: false }
+];
+
+// Pasalubong Collections
+const PASALUBONG_COLLECTIONS = [
+  { id: 'office', name: 'Office Snacks', emoji: '🏢', description: 'Perfect for sharing at work' },
+  { id: 'skincare', name: 'Skincare Haul', emoji: '✨', description: 'K-Beauty & J-Beauty essentials' },
+  { id: 'gifts', name: 'Gift Sets', emoji: '🎁', description: 'Ready-to-give presents' },
+  { id: 'foodie', name: 'Foodie Favorites', emoji: '🍜', description: 'Must-try international treats' }
+];
+
 export default function Home() {
   const [category, setCategory] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All'); // New Country Filter State
@@ -34,6 +56,12 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [arrivalFilter, setArrivalFilter] = useState('all'); // 'all', 'week', 'month'
+  const [availabilityFilter, setAvailabilityFilter] = useState('all'); // 'all', 'pasabuy', 'onhand'
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [savedSearches, setSavedSearches] = useState([]);
 
   // --- CHECK AUTH STATUS ---
   useEffect(() => {
@@ -60,13 +88,68 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Filter Products (Category + Country + Search)
+  // --- LOAD RECENT SEARCHES FROM LOCALSTORAGE ---
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches');
+    if (saved) {
+      setRecentSearches(JSON.parse(saved));
+    }
+  }, []);
+
+  // Auto-suggest matching
+  const suggestions = searchQuery.length > 0
+    ? SEARCH_SUGGESTIONS.filter(s => s.term.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 5)
+    : [];
+
+  // Handle search submission
+  const handleSearch = (term) => {
+    setSearchQuery(term);
+    setShowSuggestions(false);
+    setShowRecentSearches(false);
+
+    // Add to recent searches
+    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('recentSearches', JSON.stringify(updated));
+
+    if (searchMode === 'travelers') {
+      router.push('/offers');
+    } else {
+      document.getElementById('shop')?.scrollIntoView({behavior: 'smooth'});
+    }
+  };
+
+  // Save search for alerts
+  const saveSearch = () => {
+    if (!searchQuery) return;
+    const newSearch = { term: searchQuery, savedAt: new Date().toISOString() };
+    const updated = [newSearch, ...savedSearches].slice(0, 10);
+    setSavedSearches(updated);
+    localStorage.setItem('savedSearches', JSON.stringify(updated));
+    alert(`You'll be notified when new "${searchQuery}" items are available!`);
+  };
+
+  // Filter Products (Category + Country + Search + Arrival + Availability)
   const filteredProducts = POPULAR_PRODUCTS.filter(p => {
     const matchesCategory = category === 'All' || p.category === category;
-    const matchesCountry = countryFilter === 'All' || p.from === countryFilter; // Country Logic
+    const matchesCountry = countryFilter === 'All' || p.from === countryFilter;
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.from.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesCountry && matchesSearch;
-  }).slice(0, 8); 
+
+    // Arrival date filter (based on estimated delivery)
+    const matchesArrival = arrivalFilter === 'all' ||
+      (arrivalFilter === 'week' && p.estimatedDelivery.includes('Days') && parseInt(p.estimatedDelivery) <= 7) ||
+      (arrivalFilter === 'month' && p.estimatedDelivery.includes('Days'));
+
+    // Availability filter (simulate pasabuy vs on-hand)
+    const matchesAvailability = availabilityFilter === 'all' ||
+      (availabilityFilter === 'onhand' && p.sellers > 10) || // More sellers = likely on-hand
+      (availabilityFilter === 'pasabuy' && p.sellers <= 10); // Fewer sellers = pre-order/pasabuy
+
+    return matchesCategory && matchesCountry && matchesSearch && matchesArrival && matchesAvailability;
+  });
+
+  const displayedProducts = filteredProducts.slice(0, 8);
+  const totalResults = filteredProducts.length; 
 
   const filteredSellers = sellerCategory === 'All' ? POPULAR_SELLERS : POPULAR_SELLERS.filter(s => s.countries.includes(sellerCategory));
 
@@ -327,26 +410,142 @@ export default function Home() {
                     <>Find travelers coming from <span style={{ fontWeight: '800' }}>your destination</span></>
                 )}
             </h2>
-            <div style={{ display: 'flex', background: 'white', borderRadius: '50px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #eaeaea', maxWidth: '700px', margin: '0 auto' }}>
+            <div style={{ position: 'relative', maxWidth: '700px', margin: '0 auto' }}>
+              <div style={{ display: 'flex', background: 'white', borderRadius: '50px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #eaeaea' }}>
                 <input
                     type="text"
                     placeholder={searchMode === 'items' ? "🇯🇵 🇺🇸 🇰🇷  Search items from Japan, USA, Korea..." : "🌍 Find travelers from Japan, USA, Singapore..."}
                     style={{ flex: 1, padding: '15px 25px', border: 'none', fontSize: '1rem', outline: 'none' }}
                     value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); if(e.target.value.length === 1) document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }}
-                />
-                <button
-                    onClick={() => {
-                        if (searchMode === 'travelers') {
-                            router.push('/offers');
-                        } else {
-                            document.getElementById('shop').scrollIntoView({behavior: 'smooth'});
-                        }
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(e.target.value.length > 0);
+                      setShowRecentSearches(false);
+                      if(e.target.value.length === 1) document.getElementById('shop')?.scrollIntoView({behavior: 'smooth'});
                     }}
+                    onFocus={() => {
+                      if (searchQuery.length === 0 && recentSearches.length > 0) {
+                        setShowRecentSearches(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowSuggestions(false);
+                        setShowRecentSearches(false);
+                      }, 200);
+                    }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={saveSearch}
+                    style={{ background: 'none', border: 'none', padding: '0 15px', color: '#0070f3', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}
+                    title="Save search for alerts"
+                  >
+                    🔔
+                  </button>
+                )}
+                <button
+                    onClick={() => handleSearch(searchQuery)}
                     style={{ background: 'black', color: 'white', border: 'none', padding: '0 30px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                     Search &rarr;
                 </button>
+              </div>
+
+              {/* AUTO-SUGGEST DROPDOWN */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  marginTop: '8px',
+                  zIndex: 100,
+                  maxHeight: '300px',
+                  overflowY: 'auto'
+                }}>
+                  {suggestions.map((sug, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSearch(sug.term)}
+                      style={{
+                        padding: '12px 20px',
+                        borderBottom: idx < suggestions.length - 1 ? '1px solid #eee' : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '0.95rem' }}>🔍</span>
+                        <div>
+                          <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{sug.term}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#999' }}>{sug.category}</div>
+                        </div>
+                      </div>
+                      {sug.trending && (
+                        <span style={{
+                          background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+                          color: 'white',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase'
+                        }}>
+                          🔥 Trending
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* RECENT SEARCHES DROPDOWN */}
+              {showRecentSearches && recentSearches.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  marginTop: '8px',
+                  zIndex: 100
+                }}>
+                  <div style={{ padding: '12px 20px', borderBottom: '1px solid #eee', fontWeight: 'bold', fontSize: '0.85rem', color: '#666' }}>
+                    Recent Searches
+                  </div>
+                  {recentSearches.map((term, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSearch(term)}
+                      style={{
+                        padding: '12px 20px',
+                        borderBottom: idx < recentSearches.length - 1 ? '1px solid #eee' : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <span style={{ fontSize: '0.9rem' }}>🕐</span>
+                      <span style={{ fontSize: '0.95rem' }}>{term}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
                 {searchMode === 'items' ? (
@@ -498,6 +697,132 @@ export default function Home() {
                     </button>
                 ))}
             </div>
+
+            {/* 3. ARRIVAL DATE FILTER */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Arrival:</span>
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'week', label: '< 7 Days' },
+                  { value: 'month', label: 'This Month' }
+                ].map(opt => (
+                    <button
+                        key={opt.value}
+                        onClick={() => setArrivalFilter(opt.value)}
+                        style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: '1px solid #ddd',
+                            background: arrivalFilter === opt.value ? '#ff6b6b' : 'white',
+                            color: arrivalFilter === opt.value ? 'white' : '#666',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* 4. PASABUY VS ON-HAND TOGGLE */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#666', marginRight: '5px' }}>Availability:</span>
+                {[
+                  { value: 'all', label: 'All Items', emoji: '📦' },
+                  { value: 'onhand', label: 'On-Hand (No Wait)', emoji: '✅' },
+                  { value: 'pasabuy', label: 'Pre-Order (Pasabuy)', emoji: '⏰' }
+                ].map(opt => (
+                    <button
+                        key={opt.value}
+                        onClick={() => setAvailabilityFilter(opt.value)}
+                        style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: '1px solid #ddd',
+                            background: availabilityFilter === opt.value ? '#2e7d32' : 'white',
+                            color: availabilityFilter === opt.value ? 'white' : '#666',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}
+                    >
+                        <span>{opt.emoji}</span>
+                        <span>{opt.label}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {/* RESULTS COUNT & PASALUBONG COLLECTIONS */}
+        <div style={{ marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Results Count */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+            <div style={{ fontSize: '0.95rem', color: '#666' }}>
+              Showing <span style={{ fontWeight: 'bold', color: '#333' }}>{totalResults}</span> items
+              {countryFilter !== 'All' && <span> from <span style={{ fontWeight: 'bold', color: '#333' }}>{COUNTRY_DATA[countryFilter]?.flag} {countryFilter}</span></span>}
+            </div>
+            {/* Sort by */}
+            <select
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              <option value="hot">Sort by: Popularity</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="reliability">Traveler Reliability</option>
+              <option value="delivery">Fastest Delivery</option>
+            </select>
+          </div>
+
+          {/* Pasalubong Collections */}
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              🎁 Pasalubong Collections
+            </div>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+              {PASALUBONG_COLLECTIONS.map(col => (
+                <button
+                  key={col.id}
+                  onClick={() => {
+                    setSearchQuery(col.name);
+                    document.getElementById('shop')?.scrollIntoView({behavior: 'smooth'});
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    border: '1px solid #ddd',
+                    background: 'white',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    minWidth: '200px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = '#0070f3';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,112,243,0.2)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{col.emoji}</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{col.name}</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '32px' }}>
+                    {col.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* LOGISTICS-BASED COLLECTIONS TABS */}
@@ -581,7 +906,7 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px', marginBottom: '60px' }}>
-            {filteredProducts.length > 0 ? filteredProducts.map(product => (
+            {displayedProducts.length > 0 ? displayedProducts.map(product => (
                 <Link href={`/product/${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ border: '1px solid #eaeaea', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white', position: 'relative', height: '100%', transition: 'transform 0.2s' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
                         {product.isHot && <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#ff4d4f', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10 }}>🔥 HOT ITEM</div>}
