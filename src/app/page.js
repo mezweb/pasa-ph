@@ -906,26 +906,170 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px', marginBottom: '60px' }}>
-            {displayedProducts.length > 0 ? displayedProducts.map(product => (
-                <Link href={`/product/${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ border: '1px solid #eaeaea', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white', position: 'relative', height: '100%', transition: 'transform 0.2s' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                        {product.isHot && <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#ff4d4f', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10 }}>🔥 HOT ITEM</div>}
-                        <div style={{ height: '200px', background: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={product.images ? product.images[0] : product.image} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
-                        <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>{product.from}</div>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '5px' }}>{product.title}</h3>
-                            <div style={{ display: 'flex', gap: '10px', fontSize: '0.75rem', color: '#666', marginBottom: '15px' }}>
-                                <span style={{ background: '#e3f2fd', color: '#0070f3', padding: '2px 6px', borderRadius: '4px' }}>{product.requests} Requests</span>
-                                <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '2px 6px', borderRadius: '4px' }}>{product.sellers} Sellers</span>
+            {displayedProducts.length > 0 ? displayedProducts.map(product => {
+                // Calculate availability type (on-hand vs pre-order)
+                const isOnHand = product.sellers > 10;
+                const buttonText = isOnHand ? '✅ Buy Now' : '📝 Request';
+
+                // Calculate "All-in Price" (price + 10% service fee)
+                const serviceFee = Math.round(product.price * 0.10);
+                const allInPrice = product.price + serviceFee;
+
+                // Calculate luggage space (as percentage based on requests vs capacity)
+                const luggageCapacity = 50; // assume 50 slots available
+                const luggageUsed = Math.min(product.requests, luggageCapacity);
+                const luggagePercentage = Math.round((luggageUsed / luggageCapacity) * 100);
+
+                // Simulate "New Listing" tag (for demo, mark products with id containing 'p9' or 'p1' as new)
+                const isNewListing = ['p1', 'p9', 'p9a', 'p9b', 'p9c', 'p9d'].includes(product.id);
+
+                // Get top seller avatar (simulate with emoji based on seller name)
+                const sellerAvatar = product.topSellers && product.topSellers[0]
+                  ? `https://ui-avatars.com/api/?name=${product.topSellers[0]}&background=0070f3&color=fff&size=40&bold=true`
+                  : 'https://ui-avatars.com/api/?name=Seller&background=999&color=fff&size=40';
+
+                return (
+                    <Link href={`/product/${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <div style={{ border: '1px solid #eaeaea', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white', position: 'relative', height: '100%', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseOver={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-5px)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)';
+                        }} onMouseOut={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}>
+                            {/* NEW LISTING TAG */}
+                            {isNewListing && (
+                                <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#52c41a', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10 }}>
+                                    ✨ New Listing
+                                </div>
+                            )}
+
+                            {/* HOT ITEM TAG */}
+                            {product.isHot && !isNewListing && (
+                                <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#ff4d4f', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10 }}>
+                                    🔥 HOT ITEM
+                                </div>
+                            )}
+
+                            {/* WISHLIST HEART ICON */}
+                            <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('Added to wishlist!'); }}
+                                style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 10, fontSize: '1.1rem', transition: 'transform 0.2s' }}
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                ♡
+                            </button>
+
+                            {/* PRODUCT IMAGE WITH COUNTRY FLAG */}
+                            <div style={{ height: '200px', background: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <img src={product.images ? product.images[0] : product.image} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                                {/* COUNTRY FLAG */}
+                                <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '1rem' }}>{COUNTRY_DATA[product.from]?.flag || '🌍'}</span>
+                                    <span style={{ fontSize: '0.65rem' }}>{product.from}</span>
+                                </div>
+
+                                {/* TRAVELER AVATAR */}
+                                <div style={{ position: 'absolute', bottom: '8px', left: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <img src={sellerAvatar} alt="Traveler" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }} />
+                                    <div style={{ background: 'rgba(0,0,0,0.7)', color: 'white', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 'bold', backdropFilter: 'blur(10px)' }}>
+                                        {product.topSellers && product.topSellers[0] ? product.topSellers[0] : 'Seller'}
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>₱{product.price}</div>
-                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(product); }} style={{ background: '#0070f3', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>Add to Cart</button>
+
+                            <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                {/* ESTIMATED ARRIVAL DATE */}
+                                <div style={{ fontSize: '0.75rem', color: '#52c41a', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>📅</span>
+                                    <span>Arrives in {product.estimatedDelivery}</span>
+                                </div>
+
+                                {/* PRODUCT TITLE (TRUNCATED TO 2 LINES) */}
+                                <h3 style={{
+                                    fontSize: '1.05rem',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: '2',
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    lineHeight: '1.4',
+                                    minHeight: '2.8em'
+                                }}>
+                                    {product.title}
+                                </h3>
+
+                                {/* LUGGAGE SPACE PROGRESS BAR */}
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <span style={{ fontSize: '0.7rem', color: '#666', fontWeight: '600' }}>🧳 Luggage Space</span>
+                                        <span style={{ fontSize: '0.7rem', color: luggagePercentage > 80 ? '#ff4d4f' : '#52c41a', fontWeight: 'bold' }}>
+                                            {luggagePercentage}%
+                                        </span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '6px', background: '#f0f0f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            width: `${luggagePercentage}%`,
+                                            height: '100%',
+                                            background: luggagePercentage > 80 ? 'linear-gradient(90deg, #ff6b6b, #ff4d4f)' : 'linear-gradient(90deg, #52c41a, #73d13d)',
+                                            transition: 'width 0.3s ease'
+                                        }} />
+                                    </div>
+                                    {luggagePercentage > 80 && (
+                                        <span style={{ fontSize: '0.65rem', color: '#ff4d4f', fontWeight: '600', marginTop: '2px', display: 'block' }}>
+                                            ⚠️ Limited space!
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '8px', fontSize: '0.7rem', color: '#666', marginBottom: '15px' }}>
+                                    <span style={{ background: '#e3f2fd', color: '#0070f3', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                                        {product.requests} Requests
+                                    </span>
+                                    <span style={{ background: isOnHand ? '#e8f5e9' : '#fff3e0', color: isOnHand ? '#2e7d32' : '#f57c00', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                                        {isOnHand ? '✅ On-Hand' : '⏰ Pre-order'}
+                                    </span>
+                                </div>
+
+                                {/* ALL-IN PRICE */}
+                                <div style={{ marginTop: 'auto' }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
+                                        <div style={{ fontWeight: 'bold', fontSize: '1.3rem', color: '#000' }}>₱{allInPrice}</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#999', textDecoration: 'line-through' }}>₱{product.price}</div>
+                                    </div>
+                                    <div style={{ fontSize: '0.7rem', color: '#666', marginBottom: '10px' }}>
+                                        All-in Price (includes ₱{serviceFee} service fee)
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(product); }}
+                                        style={{
+                                            background: isOnHand ? '#2e7d32' : '#0070f3',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '10px 16px',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.9rem',
+                                            width: '100%',
+                                            transition: 'transform 0.2s, opacity 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                                    >
+                                        {buttonText}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </Link>
-            )) : <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: '#888' }}><h3>No items found for "{searchQuery}"</h3><p>Try searching for "Food", "Japan", or specific items like "Irvins".</p><button onClick={() => setSearchQuery('')} style={{ marginTop: '10px', color: '#0070f3', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Clear Search</button></div>}
+                    </Link>
+                );
+            }) : <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: '#888' }}><h3>No items found for "{searchQuery}"</h3><p>Try searching for "Food", "Japan", or specific items like "Irvins".</p><button onClick={() => setSearchQuery('')} style={{ marginTop: '10px', color: '#0070f3', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Clear Search</button></div>}
         </div>
 
         {/* TOP SELLERS SECTION */}
