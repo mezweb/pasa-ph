@@ -29,6 +29,7 @@ export default function Home() {
   const { addToCart, viewMode } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState('items'); // 'items' or 'travelers'
+  const [activeCollection, setActiveCollection] = useState('viral'); // 'viral', 'preorder', 'onhand'
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -299,13 +300,17 @@ export default function Home() {
         <div style={{ marginBottom: '30px' }}>
           <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px', borderBottom: '2px solid #eee' }}>
             <button
-              onClick={() => setCategory('All')}
+              onClick={() => {
+                setActiveCollection('viral');
+                setCountryFilter('Japan');
+                setCategory('All');
+              }}
               style={{
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: category === 'All' ? '#0070f3' : '#f5f5f5',
-                color: category === 'All' ? 'white' : '#333',
+                background: activeCollection === 'viral' ? '#0070f3' : '#f5f5f5',
+                color: activeCollection === 'viral' ? 'white' : '#333',
                 fontWeight: '700',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
@@ -316,31 +321,43 @@ export default function Home() {
               🔥 Viral Tokyo Snacks
             </button>
             <button
+              onClick={() => {
+                setActiveCollection('preorder');
+                setCategory('All');
+                setCountryFilter('All');
+              }}
               style={{
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: '#f5f5f5',
-                color: '#333',
+                background: activeCollection === 'preorder' ? '#0070f3' : '#f5f5f5',
+                color: activeCollection === 'preorder' ? 'white' : '#333',
                 fontWeight: '700',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
               }}
             >
               ⏰ Arriving Next Week (Pre-order)
             </button>
             <button
+              onClick={() => {
+                setActiveCollection('onhand');
+                setCategory('All');
+                setCountryFilter('All');
+              }}
               style={{
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: '#f5f5f5',
-                color: '#333',
+                background: activeCollection === 'onhand' ? '#0070f3' : '#f5f5f5',
+                color: activeCollection === 'onhand' ? 'white' : '#333',
                 fontWeight: '700',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
               }}
             >
               ✅ Verified On-Hand (No Waiting)
@@ -349,7 +366,11 @@ export default function Home() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Collection</h3>
-              <h2 style={{ margin: '5px 0 0', fontSize: '1.8rem', fontWeight: '800' }}>🔥 Viral Tokyo Snacks</h2>
+              <h2 style={{ margin: '5px 0 0', fontSize: '1.8rem', fontWeight: '800' }}>
+                {activeCollection === 'viral' && '🔥 Viral Tokyo Snacks'}
+                {activeCollection === 'preorder' && '⏰ Arriving Next Week (Pre-order)'}
+                {activeCollection === 'onhand' && '✅ Verified On-Hand (No Waiting)'}
+              </h2>
             </div>
             <Link href="/shop" style={{ fontSize: '0.9rem', color: '#0070f3', fontWeight: '600' }}>View All &rarr;</Link>
           </div>
