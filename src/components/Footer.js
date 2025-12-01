@@ -26,6 +26,31 @@ export default function Footer() {
                         </li>
                     </ul>
                 </div>
+                <div>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '20px' }}>Trust & Safety</h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/trust-and-safety" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                🛡️ Trust & Safety
+                            </Link>
+                        </li>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/escrow-policy" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                Escrow Policy
+                            </Link>
+                        </li>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/how-it-works" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                How It Works
+                            </Link>
+                        </li>
+                        <li style={{ marginBottom: '10px' }}>
+                            <Link href="/support" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0070f3'} onMouseOut={(e) => e.currentTarget.style.color = '#666'}>
+                                Support Center
+                            </Link>
+                        </li>
+                    </ul>
+                </div>
             </div>
             <div style={{ borderTop: '1px solid #eee', paddingTop: '30px', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>
                 &copy; 2025 Pasa.ph. All rights reserved.

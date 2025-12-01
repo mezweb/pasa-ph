@@ -32,6 +32,8 @@ export default function Home() {
   const [activeCollection, setActiveCollection] = useState('viral'); // 'viral', 'preorder', 'onhand'
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // --- CHECK AUTH STATUS ---
   useEffect(() => {
@@ -48,6 +50,15 @@ export default function Home() {
     }
   }, [viewMode, router, isLoggedIn]);
   // ---------------------------------
+
+  // --- SCROLL EFFECT FOR NAVBAR ---
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Filter Products (Category + Country + Search)
   const filteredProducts = POPULAR_PRODUCTS.filter(p => {
@@ -83,7 +94,7 @@ export default function Home() {
           marginBottom: 'clamp(10px, 2vh, 15px)',
           lineHeight: 1.2
         }}>
-          Welcome to Pasa.ph
+          Shop the World, Delivered by Travelers
         </h1>
         <p style={{
           fontSize: 'clamp(1rem, 3vw, 1.3rem)',
@@ -92,33 +103,182 @@ export default function Home() {
           maxWidth: '700px',
           lineHeight: 1.5
         }}>
-          Your trusted peer-to-peer pasabuy marketplace. Get items from around the world, delivered by travelers to the Philippines.
+          Get your favorite items from around the world at better prices—brought to the Philippines by trusted travelers.
         </p>
-        <button
-          onClick={() => document.getElementById('shop').scrollIntoView({behavior: 'smooth'})}
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            onClick={() => document.getElementById('shop').scrollIntoView({behavior: 'smooth'})}
+            style={{
+              padding: 'clamp(12px, 2vh, 15px) clamp(28px, 5vw, 40px)',
+              fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
+              fontWeight: 'bold',
+              borderRadius: '30px',
+              border: 'none',
+              background: 'white',
+              color: '#0070f3',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            }}
+          >
+            🛍️ Shop Items
+          </button>
+          <button
+            onClick={() => router.push('/start-selling')}
+            style={{
+              padding: 'clamp(12px, 2vh, 15px) clamp(28px, 5vw, 40px)',
+              fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
+              fontWeight: 'bold',
+              borderRadius: '30px',
+              border: '2px solid white',
+              background: 'transparent',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, background 0.2s',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            ✈️ Post a Trip
+          </button>
+          <button
+            onClick={() => setShowVideoModal(true)}
+            style={{
+              padding: 'clamp(10px, 2vh, 12px) clamp(20px, 4vw, 28px)',
+              fontSize: 'clamp(0.85rem, 2.2vw, 1rem)',
+              fontWeight: '600',
+              borderRadius: '30px',
+              border: '1px solid rgba(255,255,255,0.5)',
+              background: 'rgba(255,255,255,0.15)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              backdropFilter: 'blur(10px)'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+            }}
+          >
+            ▶️ How It Works
+          </button>
+        </div>
+      </div>
+
+      {/* VIDEO MODAL */}
+      {showVideoModal && (
+        <div
+          onClick={() => setShowVideoModal(false)}
           style={{
-            padding: 'clamp(12px, 2vh, 15px) clamp(28px, 5vw, 40px)',
-            fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
-            fontWeight: 'bold',
-            borderRadius: '30px',
-            border: 'none',
-            background: 'white',
-            color: '#0070f3',
-            cursor: 'pointer',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
           }}
         >
-          Start Shopping →
-        </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              maxWidth: '800px',
+              width: '100%',
+              padding: '30px',
+              position: 'relative'
+            }}
+          >
+            <button
+              onClick={() => setShowVideoModal(false)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#666'
+              }}
+            >
+              ✕
+            </button>
+            <h2 style={{ marginBottom: '20px', fontSize: '1.8rem', fontWeight: '800' }}>How Pasa.ph Works</h2>
+            <div style={{ aspectRatio: '16/9', background: '#f5f5f5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center', color: '#999' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🎥</div>
+                <div style={{ fontSize: '1rem' }}>Video Coming Soon</div>
+                <div style={{ fontSize: '0.85rem', marginTop: '5px' }}>Watch how travelers deliver items worldwide</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', fontSize: '0.85rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📝</div>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>1. Request</div>
+                <div style={{ color: '#666' }}>Post what you need</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✈️</div>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>2. Match</div>
+                <div style={{ color: '#666' }}>Get matched with travelers</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>3. Receive</div>
+                <div style={{ color: '#666' }}>Delivered to your door</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE TRAVELER TICKER */}
+      <div style={{ background: '#fff3cd', borderBottom: '1px solid #ffc107', padding: '12px 20px', overflow: 'hidden' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>✈️</span>
+            <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#856404' }}>
+              5 travelers arriving from Japan this week
+            </span>
+          </div>
+          <div style={{ height: '20px', width: '1px', background: '#ffc107' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🇺🇸</span>
+            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
+              3 from USA next week
+            </span>
+          </div>
+          <div style={{ height: '20px', width: '1px', background: '#ffc107' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🇰🇷</span>
+            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
+              8 from South Korea this month
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* --- SEARCH BAR --- */}
@@ -170,7 +330,7 @@ export default function Home() {
             <div style={{ display: 'flex', background: 'white', borderRadius: '50px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #eaeaea', maxWidth: '700px', margin: '0 auto' }}>
                 <input
                     type="text"
-                    placeholder={searchMode === 'items' ? "Search items (e.g. Tokyo Banana, iPhone, Glossier)..." : "Search by country or traveler (e.g. Japan, Tokyo, next week)..."}
+                    placeholder={searchMode === 'items' ? "🇯🇵 🇺🇸 🇰🇷  Search items from Japan, USA, Korea..." : "🌍 Find travelers from Japan, USA, Singapore..."}
                     style={{ flex: 1, padding: '15px 25px', border: 'none', fontSize: '1rem', outline: 'none' }}
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); if(e.target.value.length === 1) document.getElementById('shop').scrollIntoView({behavior: 'smooth'}); }}
@@ -242,6 +402,50 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* DEAL OF THE DAY BANNER */}
+      <div style={{ background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', padding: '20px', borderBottom: '2px solid #c92a2a' }}>
+        <div className="container">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '250px' }}>
+              <div style={{ fontSize: '2.5rem' }}>⚡</div>
+              <div>
+                <div style={{ color: 'white', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                  Deal of the Day
+                </div>
+                <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: '800', margin: 0 }}>
+                  Premium Confectionery - Only ₱75 today!
+                </h3>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px 16px', borderRadius: '8px', textAlign: 'center', backdropFilter: 'blur(10px)' }}>
+                <div style={{ color: 'white', fontSize: '1.5rem', fontWeight: '900', lineHeight: 1 }}>40%</div>
+                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.7rem', marginTop: '2px' }}>OFF</div>
+              </div>
+              <Link href="/product/p1" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  background: 'white',
+                  color: '#ee5a6f',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '30px',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  Grab Deal →
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* SHOP SECTION */}
       <div id="shop" className="container" style={{ padding: '40px 20px' }}>
