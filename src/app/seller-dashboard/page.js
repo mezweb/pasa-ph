@@ -197,7 +197,7 @@ export default function SellerDashboard() {
                 <div style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '5px' }}>
                   ₱{totalPotentialEarnings.toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.85rem', opacity: 0.9' }}>
+                <div style={{ fontSize: '0.85rem', opacity: '0.9' }}>
                   From {requests.length} open requests available
                 </div>
               </div>
