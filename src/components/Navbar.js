@@ -22,12 +22,8 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Mock notifications data (can be replaced with real data from Firebase later)
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'Your order from Tokyo has been shipped!', time: '2 hours ago', unread: true },
-    { id: 2, message: 'New seller available for your request', time: '1 day ago', unread: true },
-    { id: 3, message: 'Payment confirmed for Order #1234', time: '2 days ago', unread: false }
-  ]);
+  // Notifications data (can be populated with real data from Firebase later)
+  const [notifications, setNotifications] = useState([]);
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
@@ -57,6 +53,17 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.notifications-dropdown')) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications]);
 
   const handleLoginRedirect = () => {
     router.push('/login');
@@ -208,8 +215,7 @@ export default function Navbar() {
             {user && (
               <div
                 style={{ position: 'relative' }}
-                onMouseEnter={() => setShowNotifications(true)}
-                onMouseLeave={() => setShowNotifications(false)}
+                className="notifications-dropdown"
               >
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
