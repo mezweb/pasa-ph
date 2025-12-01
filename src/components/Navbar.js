@@ -19,6 +19,7 @@ export default function Navbar() {
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -38,6 +39,15 @@ export default function Navbar() {
     return () => unsubscribe();
   }, []);
 
+  // Scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleLoginRedirect = () => {
     router.push('/login');
   };
@@ -54,10 +64,32 @@ export default function Navbar() {
   const itemCount = (!user || !isSellerMode) ? cart.length : pasaBag.length;
 
   return (
-    <nav style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 50, padding: 'clamp(0.6rem, 2vw, 0.8rem) 0' }}>
+    <nav style={{
+      background: isScrolled ? 'white' : 'rgba(255,255,255,0.95)',
+      borderBottom: '1px solid #eaeaea',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50,
+      padding: 'clamp(0.6rem, 2vw, 0.8rem) 0',
+      boxShadow: isScrolled ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+      transition: 'all 0.3s ease',
+      backdropFilter: 'blur(10px)'
+    }}>
       <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-        <Link href="/" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: '800', color: '#0070f3', letterSpacing: '-0.5px' }}>
+        <Link href="/" style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: '800', color: '#0070f3', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           📦 Pasa.ph
+          <span style={{
+            background: '#2e7d32',
+            color: 'white',
+            fontSize: '0.5rem',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            ✓ Verified
+          </span>
         </Link>
 
         {/* Mobile Menu Toggle */}
@@ -161,10 +193,27 @@ export default function Navbar() {
                     )}
                 </>
             )}
-            
+
+            {/* NOTIFICATION BELL ICON */}
+            {user && (
+              <Link href="/notifications" style={{ position: 'relative', fontSize: '1.2rem' }}>
+                🔔
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-5px',
+                  background: '#ff4d4f',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  border: '2px solid white'
+                }}></span>
+              </Link>
+            )}
+
             {/* CART ICON */}
             <Link href="/cart" style={{ position: 'relative', fontSize: '1.2rem' }}>
-                {isSellerMode && user ? '🛍️' : '🛒'} 
+                {isSellerMode && user ? '🛍️' : '🛒'}
                 {itemCount > 0 && (
                     <span style={{ position: 'absolute', top: '-5px', right: '-10px', background: 'red', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>
                         {itemCount}
