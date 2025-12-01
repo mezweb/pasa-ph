@@ -48,7 +48,7 @@ export default function Home() {
   const [category, setCategory] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All'); // New Country Filter State
   const [sellerCategory, setSellerCategory] = useState('All');
-  const { addToCart, viewMode } = useCart();
+  const { addToCart, toggleWishlist, isInWishlist, viewMode } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState('items'); // 'items' or 'travelers'
   const [activeCollection, setActiveCollection] = useState('viral'); // 'viral', 'preorder', 'onhand'
@@ -953,20 +953,42 @@ export default function Home() {
 
                             {/* WISHLIST HEART ICON */}
                             <button
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('Added to wishlist!'); }}
-                                style={{ position: 'absolute', top: '10px', right: '10px', background: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 10, fontSize: '1.1rem', transition: 'transform 0.2s' }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleWishlist(product);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '10px',
+                                  right: '10px',
+                                  background: isInWishlist(product.id) ? '#ff4d4f' : 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '36px',
+                                  height: '36px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                  zIndex: 10,
+                                  fontSize: '1.1rem',
+                                  transition: 'transform 0.2s, background 0.2s',
+                                  color: isInWishlist(product.id) ? 'white' : '#333'
+                                }}
                                 onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                             >
-                                ♡
+                                {isInWishlist(product.id) ? '❤' : '♡'}
                             </button>
 
                             {/* PRODUCT IMAGE WITH COUNTRY FLAG */}
                             <div style={{ height: '200px', background: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                 <img src={product.images ? product.images[0] : product.image} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 
-                                {/* COUNTRY FLAG */}
-                                <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {/* COUNTRY FLAG - MOVED TO TOP LEFT */}
+                                <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 5 }}>
                                     <span style={{ fontSize: '1rem' }}>{COUNTRY_DATA[product.from]?.flag || '🌍'}</span>
                                     <span style={{ fontSize: '0.65rem' }}>{product.from}</span>
                                 </div>

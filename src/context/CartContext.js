@@ -7,6 +7,7 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   // --- BUYER STATE ---
   const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
   // --- SELLER STATE ---
   const [pasaBag, setPasaBag] = useState([]);
@@ -14,22 +15,26 @@ export function CartProvider({ children }) {
   // --- UI STATE ---
   const [viewMode, setViewMode] = useState('buyer'); // 'buyer' or 'seller'
   const [showCartPopup, setShowCartPopup] = useState(false); // Cart popup visibility
+  const [showWishlistPopup, setShowWishlistPopup] = useState(false); // Wishlist popup visibility
 
   // Load data from local storage
   useEffect(() => {
     const savedCart = localStorage.getItem('pasaCart');
     const savedBag = localStorage.getItem('pasaBag');
     const savedMode = localStorage.getItem('pasaViewMode');
-    
+    const savedWishlist = localStorage.getItem('pasaWishlist');
+
     if (savedCart) setCart(JSON.parse(savedCart));
     if (savedBag) setPasaBag(JSON.parse(savedBag));
     if (savedMode) setViewMode(savedMode);
+    if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
   }, []);
 
   // Save data to local storage
   useEffect(() => { localStorage.setItem('pasaCart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('pasaBag', JSON.stringify(pasaBag)); }, [pasaBag]);
   useEffect(() => { localStorage.setItem('pasaViewMode', viewMode); }, [viewMode]);
+  useEffect(() => { localStorage.setItem('pasaWishlist', JSON.stringify(wishlist)); }, [wishlist]);
 
   // --- BUYER ACTIONS ---
   const addToCart = (product) => {
@@ -79,6 +84,37 @@ export function CartProvider({ children }) {
 
   const clearCart = () => setCart([]);
 
+  // --- WISHLIST ACTIONS ---
+  const addToWishlist = (product) => {
+    setWishlist((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) return prev; // Already in wishlist
+      setShowWishlistPopup(true);
+      return [...prev, product];
+    });
+  };
+
+  const removeFromWishlist = (productId) => {
+    setWishlist((prev) => prev.filter((item) => item.id !== productId));
+  };
+
+  const toggleWishlist = (product) => {
+    const isInWishlist = wishlist.some((item) => item.id === product.id);
+    if (isInWishlist) {
+      removeFromWishlist(product.id);
+      return false;
+    } else {
+      addToWishlist(product);
+      return true;
+    }
+  };
+
+  const isInWishlist = (productId) => {
+    return wishlist.some((item) => item.id === productId);
+  };
+
+  const clearWishlist = () => setWishlist([]);
+
   // --- SELLER ACTIONS ---
   const addToBag = (product) => {
     // Sellers usually just add 1 instance of a request to fulfill, but logic can be same
@@ -104,9 +140,11 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider value={{
         cart, addToCart, removeFromCart, updateQuantity, increaseQuantity, decreaseQuantity, clearCart,
+        wishlist, addToWishlist, removeFromWishlist, toggleWishlist, isInWishlist, clearWishlist,
         pasaBag, addToBag, removeFromBag, clearBag,
         viewMode, setViewMode, toggleViewMode,
-        showCartPopup, setShowCartPopup
+        showCartPopup, setShowCartPopup,
+        showWishlistPopup, setShowWishlistPopup
     }}>
       {children}
     </CartContext.Provider>

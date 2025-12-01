@@ -9,6 +9,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 import Modal from '../../components/Modal';
+import { useCart } from '../../context/CartContext';
 
 export default function BuyerDashboard() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function BuyerDashboard() {
   const [myOrders, setMyOrders] = useState([]);
   const [myCheckoutOrders, setMyCheckoutOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { wishlist, removeFromWishlist, addToCart } = useCart();
 
   // Tracking State
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -179,6 +181,127 @@ export default function BuyerDashboard() {
                     <div style={{ color: '#666', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)' }}>Total Value (Est.)</div>
                 </div>
             </div>
+
+            {/* Wishlist Section */}
+            {wishlist.length > 0 && (
+              <div style={{ marginBottom: '40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>
+                    ❤️ My Wishlist
+                    <span style={{
+                      background: '#ff4d4f',
+                      color: 'white',
+                      fontSize: '0.7rem',
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      marginLeft: '10px',
+                      fontWeight: 'bold'
+                    }}>
+                      {wishlist.length}
+                    </span>
+                  </h2>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '15px',
+                  marginBottom: '20px'
+                }}>
+                  {wishlist.map(product => (
+                    <div
+                      key={product.id}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #eaeaea',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        transition: 'transform 0.2s',
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
+                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        {/* Image */}
+                        <div style={{ height: '150px', background: '#f9f9f9', position: 'relative' }}>
+                          <img
+                            src={product.images ? product.images[0] : product.image}
+                            alt={product.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ padding: '12px' }}>
+                          <h4 style={{
+                            fontSize: '0.9rem',
+                            margin: '0 0 8px',
+                            display: '-webkit-box',
+                            WebkitLineClamp: '2',
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: '1.3',
+                            minHeight: '2.6em'
+                          }}>
+                            {product.title}
+                          </h4>
+                          <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '8px' }}>
+                            From {product.from}
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#0070f3', marginBottom: '10px' }}>
+                            ₱{product.price}
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Action Buttons */}
+                      <div style={{ padding: '0 12px 12px', display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(product);
+                          }}
+                          style={{
+                            flex: 1,
+                            background: '#0070f3',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Add to Cart
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromWishlist(product.id);
+                          }}
+                          style={{
+                            background: 'white',
+                            color: '#ff4d4f',
+                            border: '1px solid #ff4d4f',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '1rem'
+                          }}
+                          title="Remove from wishlist"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Orders List */}
             <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', marginBottom: '20px' }}>My Orders & Requests</h2>
