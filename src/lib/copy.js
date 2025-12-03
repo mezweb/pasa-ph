@@ -50,7 +50,22 @@ export const TERMINOLOGY = {
   // Pasabuy Specific
   pasabuy: 'Pasabuy',
   pasabuyExplain: 'Someone traveling abroad buys and brings items for you',
-  travelerFee: "Traveler's service fee for bringing your item"
+  travelerFee: "Traveler's service fee for bringing your item",
+
+  // Marketplace Specific (NEW)
+  deliveryLocation: 'Delivery Location',
+  targetBuyPrice: 'Target Buy Price',
+  estimatedWeight: 'Estimated Weight',
+  neededBy: 'Needed by',
+  urgentRequest: 'Urgent Request',
+  bulkSelect: 'Bulk Select',
+  bulkAccept: 'Accept All Selected',
+  sortBy: 'Sort By',
+  filterByRegion: 'Filter by Region',
+  searchMarketplace: 'Search Marketplace',
+  itemSpecs: 'Item Specifications',
+  metroManila: 'Metro Manila',
+  provinces: 'Provinces'
 };
 
 export const ERROR_MESSAGES = {
@@ -93,7 +108,12 @@ export const BUTTON_TEXT = {
     cancel: 'Cancel Trip',
     acceptRequest: 'Accept Request',
     notifyMe: 'Notify me',
-    viewFulfillmentList: 'View Fulfillment List'
+    viewFulfillmentList: 'View Fulfillment List',
+    // Marketplace actions (NEW)
+    bulkAccept: 'Accept All Selected →',
+    viewDetails: 'View Details',
+    expandPhoto: 'Click to Expand',
+    clearFilters: 'Clear All Filters'
   },
   secondary: {
     viewMore: 'See more',
@@ -110,7 +130,16 @@ export const TOOLTIPS = {
   escrow: "We hold payment until you receive your item. Safe and secure!",
   serviceFee: "A small tip (10%) for the traveler who's bringing your item all the way from abroad.",
   verification: "Verified travelers have confirmed their ID, phone, and email.",
-  rating: "Based on past successful deliveries and customer reviews."
+  rating: "Based on past successful deliveries and customer reviews.",
+
+  // Marketplace Tooltips (NEW)
+  targetBuyPrice: "The maximum budget the buyer is willing to pay. This is your guide for purchasing the item.",
+  estimatedWeight: "Approximate weight to help you calculate luggage capacity and fees.",
+  deliveryLocation: "Where the buyer wants the item delivered within the Philippines.",
+  urgentRequest: "Buyer needs this item soon! Priority delivery requested.",
+  bulkSelect: "Select multiple lightweight items to accept at once and maximize your earnings.",
+  sortByProfit: "View requests organized by your potential profit amount.",
+  regionFilter: "Filter requests by delivery area to find convenient drop-offs near you."
 };
 
 // Helper function for time-based greetings

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import RequestCard from '../../components/RequestCard';
+import MarketplaceControls from '../../components/MarketplaceControls';
 import Link from 'next/link';
 
 export default function SellerDashboard() {
@@ -15,17 +17,21 @@ export default function SellerDashboard() {
   const [userTier, setUserTier] = useState('Standard');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false); // Mock verification status
+  const [isVerified, setIsVerified] = useState(false);
   const [vacationMode, setVacationMode] = useState(false);
-  const [showLuggageCalc, setShowLuggageCalc] = useState(false);
-  const [showShareLink, setShowShareLink] = useState(false);
   const [luggageWeight, setLuggageWeight] = useState(20);
-  const [luggageValue, setLuggageValue] = useState(5000);
+
+  // Marketplace controls state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [showBulkSelect, setShowBulkSelect] = useState(false);
+  const [selectedRequests, setSelectedRequests] = useState([]);
 
   // Mock data
-  const profileStrength = 65; // Out of 100
-  const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500]; // Last 7 days
-  const totalBalance = 15800; // Available for payout
+  const profileStrength = 65;
+  const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
+  const totalBalance = 15800;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -36,10 +42,34 @@ export default function SellerDashboard() {
       setUser(currentUser);
     });
 
-    // Fetch ALL pending requests
+    // Fetch ALL pending requests with enhanced data
     const q = query(collection(db, "requests"));
     const unsubscribeRequests = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const items = snapshot.docs.map(doc => {
+        const data = doc.data();
+
+        // Determine delivery location based on destination
+        const getDeliveryLocation = (to) => {
+          const locations = ['Makati', 'BGC', 'Quezon City', 'Manila', 'Pasig', 'Ortigas'];
+          return locations[Math.floor(Math.random() * locations.length)];
+        };
+
+        return {
+          id: doc.id,
+          ...data,
+          // Enhanced fields
+          deliveryLocation: data.deliveryLocation || getDeliveryLocation(data.to),
+          color: data.color || null,
+          capacity: data.capacity || null,
+          quantity: data.quantity || 1,
+          weight: data.weight || (Math.random() * 2 + 0.5).toFixed(1),
+          targetPrice: data.targetPrice || data.price,
+          estimatedProfit: data.estimatedProfit || Math.floor((data.price || 0) * 0.1),
+          neededBy: data.neededBy || null,
+          image: data.image || '/product-placeholder.jpg',
+          createdAt: data.createdAt || new Date()
+        };
+      });
       setRequests(items);
       setLoading(false);
     });
@@ -50,8 +80,73 @@ export default function SellerDashboard() {
     };
   }, [router]);
 
-  const highValueRequests = requests.filter(req => req.price >= 2000);
-  const standardRequests = requests.filter(req => req.price < 2000);
+  // Filter and sort requests
+  const filteredAndSortedRequests = useMemo(() => {
+    let filtered = [...requests];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(req =>
+        req.title?.toLowerCase().includes(query) ||
+        req.from?.toLowerCase().includes(query) ||
+        req.to?.toLowerCase().includes(query) ||
+        req.deliveryLocation?.toLowerCase().includes(query)
+      );
+    }
+
+    // Region filter
+    if (regionFilter !== 'all') {
+      if (regionFilter === 'metro-manila') {
+        const metroManilaAreas = ['Makati', 'BGC', 'Taguig', 'Quezon City', 'Manila', 'Pasig', 'Ortigas', 'Mandaluyong'];
+        filtered = filtered.filter(req =>
+          metroManilaAreas.some(area => req.deliveryLocation?.includes(area))
+        );
+      } else if (regionFilter === 'provinces') {
+        const metroManilaAreas = ['Makati', 'BGC', 'Taguig', 'Quezon City', 'Manila', 'Pasig', 'Ortigas', 'Mandaluyong'];
+        filtered = filtered.filter(req =>
+          !metroManilaAreas.some(area => req.deliveryLocation?.includes(area))
+        );
+      } else {
+        filtered = filtered.filter(req =>
+          req.deliveryLocation?.toLowerCase().includes(regionFilter.replace('-', ' '))
+        );
+      }
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'profit-high':
+          return (b.estimatedProfit || 0) - (a.estimatedProfit || 0);
+        case 'profit-low':
+          return (a.estimatedProfit || 0) - (b.estimatedProfit || 0);
+        case 'price-high':
+          return (b.price || 0) - (a.price || 0);
+        case 'price-low':
+          return (a.price || 0) - (b.price || 0);
+        case 'weight-low':
+          return parseFloat(a.weight || 0) - parseFloat(b.weight || 0);
+        case 'weight-high':
+          return parseFloat(b.weight || 0) - parseFloat(a.weight || 0);
+        case 'urgent':
+          const getDays = (req) => {
+            if (!req.neededBy) return 999;
+            const diff = new Date(req.neededBy) - new Date();
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
+          };
+          return getDays(a) - getDays(b);
+        case 'newest':
+        default:
+          return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
+
+    return filtered;
+  }, [requests, searchQuery, sortBy, regionFilter]);
+
+  const highValueRequests = filteredAndSortedRequests.filter(req => (req.price || 0) >= 2000);
+  const standardRequests = filteredAndSortedRequests.filter(req => (req.price || 0) < 2000);
   const totalPotentialEarnings = requests.reduce((sum, req) => sum + (req.price || 0), 0);
 
   // To-do list items
@@ -69,7 +164,7 @@ export default function SellerDashboard() {
     { id: 3, text: 'Message from buyer about delivery', time: '4 hours ago', type: 'message' }
   ];
 
-  // Most requested items (mock)
+  // Most requested items
   const mostRequestedItems = [
     { item: 'iPhone 15', count: 45, avgPrice: 55000 },
     { item: 'Melano CC Serum', count: 38, avgPrice: 450 },
@@ -97,17 +192,46 @@ export default function SellerDashboard() {
         acceptedAt: serverTimestamp()
       });
       alert(`Request ${title} ACCEPTED!`);
+      // Remove from selected if in bulk mode
+      setSelectedRequests(prev => prev.filter(reqId => reqId !== id));
     } catch (error) {
       console.error("Error accepting request:", error);
       alert("Failed to accept request.");
     }
   };
 
-  const calculateLuggageCapacity = () => {
-    const maxWeight = 23; // kg
-    const remainingWeight = maxWeight - luggageWeight;
-    const maxValue = luggageValue;
-    return { remainingWeight, maxValue };
+  const handleBulkAccept = async () => {
+    if (selectedRequests.length === 0) return;
+    if (!confirm(`Accept ${selectedRequests.length} requests at once?`)) return;
+
+    const promises = selectedRequests.map(id => {
+      const req = requests.find(r => r.id === id);
+      return updateDoc(doc(db, "requests", id), {
+        status: 'Accepted',
+        sellerId: user.uid,
+        acceptedAt: serverTimestamp()
+      });
+    });
+
+    try {
+      await Promise.all(promises);
+      alert(`Successfully accepted ${selectedRequests.length} requests!`);
+      setSelectedRequests([]);
+      setShowBulkSelect(false);
+    } catch (error) {
+      console.error("Error in bulk accept:", error);
+      alert("Some requests failed to accept. Please try again.");
+    }
+  };
+
+  const handleSelectRequest = (id) => {
+    setSelectedRequests(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(reqId => reqId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
   };
 
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
@@ -118,7 +242,7 @@ export default function SellerDashboard() {
       <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px' }}>
         <div className="container" style={{ padding: '40px 20px' }}>
 
-          {/* 1. GIANT POST A TRIP BUTTON + Header */}
+          {/* Header + Post Trip Button */}
           <div style={{
             background: 'linear-gradient(135deg, #0070f3 0%, #0051cc 100%)',
             padding: '30px',
@@ -165,7 +289,7 @@ export default function SellerDashboard() {
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* 2. PROFILE STRENGTH */}
+              {/* Profile Strength */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📊 Profile Strength</h3>
@@ -189,7 +313,7 @@ export default function SellerDashboard() {
                 </div>
               </div>
 
-              {/* 3. TOTAL POTENTIAL EARNINGS */}
+              {/* Total Potential Earnings */}
               <div style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   💰 Total Potential Earnings
@@ -202,7 +326,7 @@ export default function SellerDashboard() {
                 </div>
               </div>
 
-              {/* 4. TO-DO LIST WIDGET */}
+              {/* To-Do List */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>📋 To-Do List</h3>
                 {todoItems.map((item, idx) => (
@@ -235,7 +359,7 @@ export default function SellerDashboard() {
                 ))}
               </div>
 
-              {/* 5. VERIFY IDENTITY CTA */}
+              {/* Verify Identity */}
               {!isVerified && (
                 <div style={{
                   background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
@@ -272,7 +396,7 @@ export default function SellerDashboard() {
             {/* Right Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* 6. WEEKLY EARNINGS GRAPH */}
+              {/* Weekly Earnings Graph */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>📈 Weekly Earnings</h3>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '150px' }}>
@@ -302,7 +426,7 @@ export default function SellerDashboard() {
                 </div>
               </div>
 
-              {/* 7. NOTIFICATIONS LIST */}
+              {/* Notifications */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔔 Recent Notifications</h3>
                 {notifications.map(notif => (
@@ -328,7 +452,7 @@ export default function SellerDashboard() {
                 ))}
               </div>
 
-              {/* 8. QUICK REPLY TEMPLATES */}
+              {/* Quick Reply Templates */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>💬 Quick Reply Templates</h3>
                 {quickReplies.map((reply, idx) => (
@@ -367,7 +491,7 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* 13. LEVEL/TIER PROGRESS */}
+          {/* Seller Tier Progress */}
           <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', marginBottom: '25px' }}>
             <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>🏆 Seller Tier Progress</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
@@ -417,10 +541,10 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* Bottom Row - 3 columns */}
+          {/* Bottom Row - Utilities */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' }}>
 
-            {/* 9. LUGGAGE CALCULATOR */}
+            {/* Luggage Calculator */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🧳 Luggage Calculator</h3>
               <div style={{ marginBottom: '15px' }}>
@@ -448,7 +572,7 @@ export default function SellerDashboard() {
               </div>
             </div>
 
-            {/* 10. MOST REQUESTED ITEMS */}
+            {/* Most Requested Items */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔥 Most Requested Items</h3>
               {mostRequestedItems.slice(0, 4).map((item, idx) => (
@@ -469,7 +593,7 @@ export default function SellerDashboard() {
               ))}
             </div>
 
-            {/* 11. SHARE MY SHOP */}
+            {/* Share My Shop */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔗 Share My Shop</h3>
               <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
@@ -507,53 +631,34 @@ export default function SellerDashboard() {
                   Copy
                 </button>
               </div>
-              <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                <a href={`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(shopLink)}`} target="_blank" rel="noopener noreferrer">
-                  <button style={{ padding: '8px 12px', background: '#1877f2', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                    📘 Facebook
-                  </button>
-                </a>
-                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shopLink)}`} target="_blank" rel="noopener noreferrer">
-                  <button style={{ padding: '8px 12px', background: '#1da1f2', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                    🐦 Twitter
-                  </button>
-                </a>
-              </div>
             </div>
           </div>
 
-          {/* 12. VACATION MODE + 14. PAYOUT BUTTON + 15. TRAVELER GUIDELINES */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px', marginBottom: '30px' }}>
+          {/* Vacation Mode + Payout + Guidelines */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px', marginBottom: '40px' }}>
 
-            {/* VACATION MODE */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🏖️ Vacation Mode</h3>
               <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
                 Temporarily hide your profile from new requests
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button
-                  onClick={() => setVacationMode(!vacationMode)}
-                  style={{
-                    padding: '12px 24px',
-                    background: vacationMode ? '#ff4d4f' : '#2e7d32',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    flex: 1
-                  }}
-                >
-                  {vacationMode ? 'Turn Off' : 'Turn On'}
-                </button>
-                {vacationMode && (
-                  <span style={{ color: '#ff4d4f', fontWeight: 'bold', fontSize: '0.9rem' }}>🔴 Active</span>
-                )}
-              </div>
+              <button
+                onClick={() => setVacationMode(!vacationMode)}
+                style={{
+                  padding: '12px 24px',
+                  background: vacationMode ? '#ff4d4f' : '#2e7d32',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  width: '100%'
+                }}
+              >
+                {vacationMode ? 'Turn Off' : 'Turn On'}
+              </button>
             </div>
 
-            {/* 14. PAYOUT BUTTON */}
             <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: '1.1rem' }}>💳 Available Balance</h3>
               <div style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '15px' }}>
@@ -577,7 +682,6 @@ export default function SellerDashboard() {
               </button>
             </div>
 
-            {/* 15. TRAVELER GUIDELINES */}
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>📖 Traveler Guidelines</h3>
               <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
@@ -600,7 +704,26 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* REQUESTS SECTIONS */}
+          {/* MARKETPLACE SECTION WITH ALL NEW FEATURES */}
+
+          {/* Marketplace Controls (Search, Sort, Filter, Bulk Select) */}
+          <MarketplaceControls
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            regionFilter={regionFilter}
+            onRegionFilterChange={setRegionFilter}
+            showBulkSelect={showBulkSelect}
+            onToggleBulkSelect={() => {
+              setShowBulkSelect(!showBulkSelect);
+              if (showBulkSelect) setSelectedRequests([]);
+            }}
+            selectedCount={selectedRequests.length}
+            onBulkAccept={handleBulkAccept}
+          />
+
+          {/* Gold/Diamond Exclusive Requests */}
           <div style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.5rem', margin: 0 }}>💎 Gold/Diamond Exclusive Requests</h2>
@@ -630,79 +753,54 @@ export default function SellerDashboard() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                 {highValueRequests.map(req => (
-                  <div key={req.id} style={{
-                    background: 'white',
-                    border: req.status === 'Accepted' ? '2px solid #2e7d32' : '1px solid #eaeaea',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    position: 'relative',
-                    boxShadow: req.status === 'Accepted' ? '0 0 10px rgba(46, 125, 50, 0.5)' : '0 4px 12px rgba(212, 175, 55, 0.1)'
-                  }}>
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#d4af37', color: 'white', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>EXCLUSIVE</div>
-                    <h4 style={{ margin: '0 0 5px' }}>{req.title}</h4>
-                    <p style={{ color: '#666', fontSize: '0.9rem', margin: '0 0 15px' }}>{req.from} &rarr; {req.to}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#d4af37' }}>₱{req.price}</span>
-                      <button
-                        onClick={() => handleAcceptRequest(req.id, req.title)}
-                        disabled={req.status === 'Accepted'}
-                        style={{
-                          background: req.status === 'Accepted' ? '#2e7d32' : '#d4af37',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {req.status === 'Accepted' ? 'Accepted' : 'Accept'}
-                      </button>
-                    </div>
-                  </div>
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onAccept={handleAcceptRequest}
+                    isSelected={selectedRequests.includes(req.id)}
+                    onSelect={handleSelectRequest}
+                    showBulkSelect={showBulkSelect}
+                    tier="Gold"
+                  />
                 ))}
-                {highValueRequests.length === 0 && <p style={{ color: '#999' }}>No exclusive requests available right now.</p>}
+                {highValueRequests.length === 0 && (
+                  <p style={{ color: '#999', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
+                    No exclusive requests match your filters.
+                  </p>
+                )}
               </div>
             )}
           </div>
 
+          {/* Standard Requests */}
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>Standard Requests</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {standardRequests.map(req => (
-                <div key={req.id} style={{
-                  background: 'white',
-                  border: req.status === 'Accepted' ? '2px solid #2e7d32' : '1px solid #eaeaea',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  boxShadow: req.status === 'Accepted' ? '0 0 10px rgba(46, 125, 50, 0.5)' : '0 1px 3px rgba(0,0,0,0.05)'
-                }}>
-                  <h4 style={{ margin: '0 0 5px' }}>{req.title}</h4>
-                  <p style={{ color: '#666', fontSize: '0.9rem', margin: '0 0 15px' }}>{req.from} &rarr; {req.to}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#333' }}>₱{req.price}</span>
-                    <button
-                      onClick={() => handleAcceptRequest(req.id, req.title)}
-                      disabled={req.status === 'Accepted'}
-                      style={{
-                        background: req.status === 'Accepted' ? '#2e7d32' : 'white',
-                        border: req.status === 'Accepted' ? 'none' : '1px solid #0070f3',
-                        color: req.status === 'Accepted' ? 'white' : '#0070f3',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {req.status === 'Accepted' ? 'Accepted' : 'Accept'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {standardRequests.length === 0 && <p style={{ color: '#999' }}>No standard requests available.</p>}
-            </div>
+            {loading ? (
+              <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Loading requests...</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                {standardRequests.map(req => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onAccept={handleAcceptRequest}
+                    isSelected={selectedRequests.includes(req.id)}
+                    onSelect={handleSelectRequest}
+                    showBulkSelect={showBulkSelect}
+                    tier="Standard"
+                  />
+                ))}
+                {standardRequests.length === 0 && (
+                  <p style={{ color: '#999', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
+                    {filteredAndSortedRequests.length === 0 && requests.length > 0
+                      ? "No requests match your current filters. Try adjusting your search or filters."
+                      : "No standard requests available."}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
         </div>
