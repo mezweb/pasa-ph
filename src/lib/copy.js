@@ -21,6 +21,15 @@ export const TERMINOLOGY = {
   serviceFee: "Traveler's Tip",
   serviceFeeAlt: "Traveler's Fee",
 
+  // Navigation Terms (NEW)
+  pasaBag: 'Fulfillment List',
+  addToBag: 'Accept Request',
+  myOrders: 'My Orders',
+  marketplace: 'Marketplace',
+  deliveries: 'Deliveries',
+  inbox: 'Inbox',
+  dashboard: 'Dashboard',
+
   // Actions
   addToCart: 'Get it!',
   buy: 'Book it!',
@@ -28,6 +37,9 @@ export const TERMINOLOGY = {
   request: 'Request this!',
   message: 'Message Traveler',
   track: 'Track My Order',
+  acceptRequest: 'Accept Request',
+  backToDashboard: 'Back to Dashboard',
+  notifyMe: 'Notify me when buyers appear',
 
   // Status
   pending: 'On the way',
@@ -78,14 +90,18 @@ export const BUTTON_TEXT = {
     request: 'Request this!',
     message: 'Chat with Traveler',
     track: 'Track Order',
-    cancel: 'Cancel Trip'
+    cancel: 'Cancel Trip',
+    acceptRequest: 'Accept Request',
+    notifyMe: 'Notify me',
+    viewFulfillmentList: 'View Fulfillment List'
   },
   secondary: {
     viewMore: 'See more',
     viewAll: 'View all',
     learnMore: 'Learn more',
     goBack: 'Go back',
-    close: 'Close'
+    close: 'Close',
+    backToDashboard: '← Back to Dashboard'
   }
 };
 
