@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -8,7 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { POPULAR_PRODUCTS } from '@/lib/products'; 
+import { POPULAR_PRODUCTS } from '@/lib/products';
 
 // --- MOCK DATA GENERATOR ---
 const getSellerProfile = (id) => {
@@ -20,24 +20,46 @@ const getSellerProfile = (id) => {
     { lvl: 5, name: "Legend", color: "#7b1fa2" }
   ];
 
-  const sales = id.length * 12; 
+  const sales = id.length * 12;
   const trips = Math.floor(sales / 5);
-  const rating = (4 + (id.length % 10) / 10).toFixed(1); 
-  
+  const rating = (4 + (id.length % 10) / 10).toFixed(1);
+
   let levelObj = levels[0];
   if (sales > 100) levelObj = levels[4];
   else if (sales > 50) levelObj = levels[3];
   else if (sales > 25) levelObj = levels[2];
   else if (sales > 10) levelObj = levels[1];
 
+  const joinYear = 2021 + (id.length % 4);
+
   return {
     id,
     name: id,
-    bio: `Hi! I'm ${id}. I travel frequently for business and leisure. I love finding unique items for my Pasa.ph customers!`,
+    bio: `Hi! I'm ${id}. I travel frequently for business and leisure. I love finding unique items for my Pasa.ph customers! I've been helping people get authentic products since ${joinYear}.`,
     level: levelObj,
-    stats: { sales, trips, rating },
+    stats: {
+      sales,
+      trips,
+      rating,
+      successfulTransactions: sales // All sales are successful
+    },
     destinations: ['Japan', 'South Korea', 'Singapore', 'USA'].slice(0, (id.length % 4) + 1),
-    joined: `202${id.length % 4}`,
+    commonRoutes: [
+      { from: 'Tokyo', to: 'Manila', frequency: 'Monthly' },
+      { from: 'Seoul', to: 'Cebu', frequency: 'Quarterly' }
+    ],
+    joined: joinYear,
+    joinedDate: new Date(joinYear, id.length % 12, (id.length % 28) + 1),
+    languages: ['English', 'Tagalog', 'Japanese'].slice(0, (id.length % 3) + 1),
+    verifications: {
+      email: true,
+      phone: id.length > 8,
+      id: id.length > 10
+    },
+    socialMedia: {
+      instagram: id.length > 7 ? `${id.toLowerCase()}` : null,
+      facebook: id.length > 6 ? `${id}PH` : null
+    },
     topItems: [
         { id: 's1', title: 'Tokyo Banana', price: 800, from: 'Japan', to: 'Manila', image: 'https://placehold.co/400x400/ffeeba/856404?text=Tokyo+Banana' },
         { id: 's2', title: 'Don Quijote Snacks', price: 500, from: 'Japan', to: 'Manila', image: 'https://placehold.co/400x400/ffeb3b/000000?text=Snacks' },
@@ -57,10 +79,14 @@ export default function SellerProfilePage() {
   const [newRating, setNewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [newReview, setNewReview] = useState('');
+  const [reviewImages, setReviewImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
   const [filterRating, setFilterRating] = useState('all');
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const fileInputRef = useRef(null);
 
   // Check auth status
   useEffect(() => {
@@ -93,6 +119,32 @@ export default function SellerProfilePage() {
     }
   };
 
+  // Handle image upload for reviews
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + reviewImages.length > 5) {
+      alert('Maximum 5 images allowed per review');
+      return;
+    }
+
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Each image must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReviewImages(prev => [...prev, { url: reader.result, file }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeReviewImage = (index) => {
+    setReviewImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
 
@@ -121,6 +173,7 @@ export default function SellerProfilePage() {
         userName: user.displayName || user.email.split('@')[0],
         rating: newRating,
         comment: newReview.trim(),
+        images: reviewImages.map(img => img.url), // In production, upload to storage first
         createdAt: serverTimestamp()
       };
 
@@ -137,6 +190,7 @@ export default function SellerProfilePage() {
       // Reset form
       setNewRating(0);
       setNewReview('');
+      setReviewImages([]);
 
       // Show confirmation popup
       setShowConfirmation(true);
@@ -149,6 +203,37 @@ export default function SellerProfilePage() {
       alert('Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle report user
+  const handleReportUser = async () => {
+    if (!user) {
+      alert('Please login to report a user');
+      router.push('/login');
+      return;
+    }
+
+    if (!reportReason.trim()) {
+      alert('Please provide a reason for reporting');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'reports'), {
+        reportedUserId: sellerName,
+        reporterId: user.uid,
+        reporterName: user.displayName || user.email,
+        reason: reportReason,
+        createdAt: serverTimestamp()
+      });
+
+      alert('Report submitted. Our team will review it shortly.');
+      setShowReportModal(false);
+      setReportReason('');
+    } catch (error) {
+      console.error('Error reporting user:', error);
+      alert('Failed to submit report. Please try again.');
     }
   };
 
@@ -198,19 +283,19 @@ export default function SellerProfilePage() {
   return (
     <>
       <Navbar />
-      
+
       {/* PROFILE HEADER */}
       <div style={{ background: 'white', borderBottom: '1px solid #eaeaea' }}>
         <div className="container" style={{ padding: '40px 20px', maxWidth: '900px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '30px', flexWrap: 'wrap' }}>
-                
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '30px', flexWrap: 'wrap' }}>
+
                 {/* Avatar & Level */}
                 <div style={{ position: 'relative' }}>
-                    <img 
-                        src={`https://placehold.co/120x120/0070f3/ffffff?text=${seller.name.charAt(0)}`} 
+                    <img
+                        src={`https://placehold.co/120x120/0070f3/ffffff?text=${seller.name.charAt(0)}`}
                         style={{ width: '120px', height: '120px', borderRadius: '50%', border: `4px solid ${seller.level.color}` }}
                     />
-                    <div style={{ 
+                    <div style={{
                         position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)',
                         background: seller.level.color, color: 'white', padding: '4px 12px', borderRadius: '20px',
                         fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
@@ -221,9 +306,166 @@ export default function SellerProfilePage() {
 
                 {/* Info */}
                 <div style={{ flex: 1 }}>
-                    <h1 style={{ margin: '0 0 10px' }}>{seller.name}</h1>
-                    <p style={{ color: '#666', marginBottom: '15px', maxWidth: '500px' }}>{seller.bio}</p>
-                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                        <h1 style={{ margin: 0 }}>{seller.name}</h1>
+
+                        {/* Verification Badges */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            {seller.verifications.email && (
+                                <div style={{
+                                    background: '#4caf50',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }} title="Email Verified">
+                                    ✉️ Email
+                                </div>
+                            )}
+                            {seller.verifications.phone && (
+                                <div style={{
+                                    background: '#2196f3',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }} title="Phone Verified">
+                                    📱 Phone
+                                </div>
+                            )}
+                            {seller.verifications.id && (
+                                <div style={{
+                                    background: '#ff9800',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }} title="ID Verified">
+                                    🆔 ID
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Join Date */}
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '12px' }}>
+                        📅 Member since {seller.joinedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
+
+                    {/* Bio */}
+                    <p style={{ color: '#666', marginBottom: '15px', maxWidth: '600px', lineHeight: '1.6' }}>{seller.bio}</p>
+
+                    {/* Languages Spoken */}
+                    <div style={{ marginBottom: '15px' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#666', marginRight: '8px' }}>🗣️ Languages:</span>
+                        {seller.languages.map((lang, idx) => (
+                            <span key={lang} style={{
+                                background: '#e3f2fd',
+                                color: '#0070f3',
+                                padding: '3px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.8rem',
+                                marginRight: '6px',
+                                fontWeight: '500'
+                            }}>
+                                {lang}
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Common Routes */}
+                    <div style={{ marginBottom: '15px' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '8px', fontWeight: '500' }}>✈️ Common Routes:</div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {seller.commonRoutes.map((route, idx) => (
+                                <div key={idx} style={{
+                                    background: '#f0f0f0',
+                                    color: '#333',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <span style={{ fontWeight: 'bold' }}>{route.from}</span>
+                                    →
+                                    <span style={{ fontWeight: 'bold' }}>{route.to}</span>
+                                    <span style={{
+                                        background: '#2e7d32',
+                                        color: 'white',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '0.7rem',
+                                        marginLeft: '4px'
+                                    }}>
+                                        {route.frequency}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Social Media Links */}
+                    {(seller.socialMedia.instagram || seller.socialMedia.facebook) && (
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                            {seller.socialMedia.instagram && (
+                                <a
+                                    href={`https://instagram.com/${seller.socialMedia.instagram}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
+                                        color: 'white',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.85rem',
+                                        textDecoration: 'none',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    📷 Instagram
+                                </a>
+                            )}
+                            {seller.socialMedia.facebook && (
+                                <a
+                                    href={`https://facebook.com/${seller.socialMedia.facebook}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        background: '#1877f2',
+                                        color: 'white',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.85rem',
+                                        textDecoration: 'none',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    👥 Facebook
+                                </a>
+                            )}
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {seller.destinations.map(dest => (
                             <span key={dest} style={{ background: '#f0f0f0', color: '#333', padding: '5px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>
@@ -234,17 +476,17 @@ export default function SellerProfilePage() {
                 </div>
 
                 {/* Stats Box */}
-                <div style={{ display: 'flex', gap: '20px', background: '#f9f9f9', padding: '20px', borderRadius: '12px', border: '1px solid #eee' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', background: '#f9f9f9', padding: '20px', borderRadius: '12px', border: '1px solid #eee', minWidth: '200px' }}>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>{seller.stats.sales}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Sold</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#2e7d32' }}>{seller.stats.successfulTransactions}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#666' }}>✓ Successful Transactions</div>
                     </div>
-                    <div style={{ width: '1px', background: '#ddd' }}></div>
+                    <div style={{ height: '1px', background: '#ddd' }}></div>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#333' }}>{seller.stats.trips}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Trips</div>
+                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Trips Completed</div>
                     </div>
-                    <div style={{ width: '1px', background: '#ddd' }}></div>
+                    <div style={{ height: '1px', background: '#ddd' }}></div>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#f09433' }}>
                             {averageRating > 0 ? `${averageRating} ★` : 'No ratings'}
@@ -256,17 +498,49 @@ export default function SellerProfilePage() {
                 </div>
 
             </div>
+
+            {/* Report User Button */}
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                    onClick={() => setShowReportModal(true)}
+                    style={{
+                        background: '#ffebee',
+                        color: '#d32f2f',
+                        border: '1px solid #ef5350',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                        e.target.style.background = '#d32f2f';
+                        e.target.style.color = 'white';
+                    }}
+                    onMouseOut={(e) => {
+                        e.target.style.background = '#ffebee';
+                        e.target.style.color = '#d32f2f';
+                    }}
+                >
+                    <span style={{ fontSize: '1rem' }}>⚠️</span>
+                    Report User
+                </button>
+            </div>
         </div>
       </div>
 
       {/* CONTENT BODY */}
       <div style={{ background: '#f8f9fa', minHeight: '60vh', padding: '40px 0' }}>
         <div className="container" style={{ maxWidth: '900px' }}>
-            
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '1.5rem' }}>Top Items & Recent Activity</h2>
-                <button 
-                    className="btn-primary" 
+                <button
+                    className="btn-primary"
                     onClick={() => router.push(`/request-item/${seller.name}`)}
                     style={{ fontSize: '0.9rem' }}
                 >
@@ -292,7 +566,7 @@ export default function SellerProfilePage() {
                         </div>
                     </Link>
                 ))}
-                
+
                 <div style={{ background: 'white', borderRadius: '8px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#888', minHeight: '250px' }}>
                     <span style={{ fontSize: '2rem', marginBottom: '10px' }}>🛍️</span>
                     See all 50+ items sold
@@ -364,6 +638,88 @@ export default function SellerProfilePage() {
                             <div style={{ fontSize: 'clamp(0.75rem, 2vw, 0.85rem)', color: '#888', marginTop: '5px' }}>
                                 {newReview.length}/500 characters
                             </div>
+                        </div>
+
+                        {/* Photo Upload */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                                📷 Add Photos (Optional)
+                            </label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleImageUpload}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{
+                                    background: '#f0f0f0',
+                                    border: '2px dashed #ccc',
+                                    padding: '12px 20px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    color: '#666',
+                                    width: '100%',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.target.style.background = '#e8e8e8';
+                                    e.target.style.borderColor = '#aaa';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.target.style.background = '#f0f0f0';
+                                    e.target.style.borderColor = '#ccc';
+                                }}
+                            >
+                                📎 Choose Images (Max 5, 5MB each)
+                            </button>
+
+                            {/* Preview uploaded images */}
+                            {reviewImages.length > 0 && (
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
+                                    {reviewImages.map((img, index) => (
+                                        <div key={index} style={{ position: 'relative' }}>
+                                            <img
+                                                src={img.url}
+                                                alt={`Review ${index + 1}`}
+                                                style={{
+                                                    width: '100px',
+                                                    height: '100px',
+                                                    objectFit: 'cover',
+                                                    borderRadius: '8px',
+                                                    border: '2px solid #eee'
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeReviewImage(index)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-8px',
+                                                    right: '-8px',
+                                                    background: '#ef5350',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '50%',
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.9rem'
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Submit Button */}
@@ -486,9 +842,31 @@ export default function SellerProfilePage() {
                                     </div>
 
                                     {/* Review Comment */}
-                                    <p style={{ margin: 0, color: '#333', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', lineHeight: 1.6 }}>
+                                    <p style={{ margin: '0 0 15px 0', color: '#333', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', lineHeight: 1.6 }}>
                                         {review.comment}
                                     </p>
+
+                                    {/* Review Images */}
+                                    {review.images && review.images.length > 0 && (
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            {review.images.map((imgUrl, idx) => (
+                                                <img
+                                                    key={idx}
+                                                    src={imgUrl}
+                                                    alt={`Review photo ${idx + 1}`}
+                                                    style={{
+                                                        width: '120px',
+                                                        height: '120px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '8px',
+                                                        border: '2px solid #eee',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={() => window.open(imgUrl, '_blank')}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -498,6 +876,101 @@ export default function SellerProfilePage() {
 
         </div>
       </div>
+
+      {/* Report User Modal */}
+      {showReportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}
+        onClick={() => setShowReportModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+              Report User
+            </h3>
+
+            <p style={{ color: '#666', marginBottom: '20px', fontSize: '0.9rem' }}>
+              Please provide details about why you're reporting @{seller.name}. Our team will review this report.
+            </p>
+
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="Describe the issue (e.g., fake products, scam attempt, harassment, etc.)"
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #ddd',
+                fontSize: '0.95rem',
+                fontFamily: 'inherit',
+                resize: 'vertical',
+                marginBottom: '20px',
+                outline: 'none'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#0070f3'}
+              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+            />
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowReportModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'white',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReportUser}
+                disabled={!reportReason.trim()}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: !reportReason.trim() ? '#ccc' : '#d32f2f',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  cursor: !reportReason.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem'
+                }}
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Popup */}
       {showConfirmation && (
