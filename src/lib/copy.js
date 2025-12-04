@@ -65,7 +65,24 @@ export const TERMINOLOGY = {
   searchMarketplace: 'Search Marketplace',
   itemSpecs: 'Item Specifications',
   metroManila: 'Metro Manila',
-  provinces: 'Provinces'
+  provinces: 'Provinces',
+
+  // Fulfillment List Specific (NEW)
+  fulfillmentList: 'Fulfillment List',
+  toBuy: 'To Buy',
+  purchased: 'Purchased',
+  delivered: 'Delivered',
+  removeItem: 'Remove Item',
+  exportShoppingList: 'Export Shopping List',
+  messageBuyer: 'Message Buyer',
+  groupByBuyer: 'Group by Buyer',
+  customsTracker: 'Customs De Minimis Tracker',
+  deMinimisLimit: 'De Minimis Limit',
+  pendingPayout: 'Pending Payout',
+  payoutBreakdown: 'Payout Breakdown',
+  meetup: 'Meetup',
+  shipping: 'Shipping',
+  markAsBought: 'Mark as Bought'
 };
 
 export const ERROR_MESSAGES = {
@@ -113,7 +130,12 @@ export const BUTTON_TEXT = {
     bulkAccept: 'Accept All Selected →',
     viewDetails: 'View Details',
     expandPhoto: 'Click to Expand',
-    clearFilters: 'Clear All Filters'
+    clearFilters: 'Clear All Filters',
+    // Fulfillment actions (NEW)
+    exportList: 'Export Shopping List',
+    messageBuyer: 'Message Buyer',
+    removeItem: 'Remove Item',
+    markBought: 'Mark as Bought'
   },
   secondary: {
     viewMore: 'See more',
@@ -139,7 +161,17 @@ export const TOOLTIPS = {
   urgentRequest: "Buyer needs this item soon! Priority delivery requested.",
   bulkSelect: "Select multiple lightweight items to accept at once and maximize your earnings.",
   sortByProfit: "View requests organized by your potential profit amount.",
-  regionFilter: "Filter requests by delivery area to find convenient drop-offs near you."
+  regionFilter: "Filter requests by delivery area to find convenient drop-offs near you.",
+
+  // Fulfillment Tooltips (NEW)
+  customsDeMinimis: "Items valued at ₱10,000 or less are generally tax-free. Values above may incur 20-30% customs duties.",
+  payoutBreakdown: "Your total payout includes the item's buy price plus your 10% service fee.",
+  groupByBuyer: "Organize items by buyer to see all requests from the same person. Helpful for planning meetups!",
+  exportShoppingList: "Download a printable checklist of all items you need to buy, organized by buyer.",
+  statusProgression: "Track each item through the process: To Buy → Purchased → Delivered.",
+  removeReason: "Let the buyer know why you can't fulfill this request. They'll receive a refund automatically.",
+  deadlineWarning: "Items highlighted in red are due within 48 hours. Prioritize these!",
+  markAsBought: "Check off items as you shop to track your progress. They'll show with a strikethrough."
 };
 
 // Helper function for time-based greetings
