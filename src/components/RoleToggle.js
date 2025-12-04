@@ -10,6 +10,9 @@ export default function RoleToggle() {
   const handleToggle = () => {
     setIsAnimating(true);
     const newMode = viewMode === 'buyer' ? 'seller' : 'buyer';
+
+    // Save to localStorage immediately before redirecting
+    localStorage.setItem('pasaViewMode', newMode);
     setViewMode(newMode);
 
     // Redirect to appropriate page based on mode
