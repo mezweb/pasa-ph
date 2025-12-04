@@ -12,9 +12,13 @@ export default function RoleToggle() {
     const newMode = viewMode === 'buyer' ? 'seller' : 'buyer';
     setViewMode(newMode);
 
-    // Force page reload to show correct dashboard/view
+    // Redirect to appropriate page based on mode
     setTimeout(() => {
-      window.location.reload();
+      if (newMode === 'buyer') {
+        window.location.href = '/';
+      } else {
+        window.location.href = '/seller-dashboard';
+      }
     }, 300);
   };
 
