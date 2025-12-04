@@ -22,16 +22,16 @@ export default function LoginPage() {
     if (docSnap.exists()) {
       const userData = docSnap.data();
 
-      // If profile is complete, go to home
-      if (userData.isProfileComplete) {
+      // Check if user is a seller first (prioritize seller dashboard)
+      if (userData.role === 'Seller' || userData.isSeller) {
+        // Always redirect sellers to dashboard
+        router.push('/seller-dashboard');
+      } else if (userData.isProfileComplete) {
+        // Buyers with complete profile go to home
         router.push('/');
       } else {
-        // If incomplete, redirect to appropriate onboarding
-        if (userData.role === 'Seller' || userData.isSeller) {
-          router.push('/start-selling');
-        } else {
-          router.push('/buyer-onboarding');
-        }
+        // Buyers with incomplete profile go to onboarding
+        router.push('/buyer-onboarding');
       }
     } else {
       // No user document exists, redirect to buyer onboarding by default
