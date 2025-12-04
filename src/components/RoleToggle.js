@@ -8,21 +8,17 @@ export default function RoleToggle() {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleToggle = () => {
-    setIsAnimating(true);
     const newMode = viewMode === 'buyer' ? 'seller' : 'buyer';
 
-    // Save to localStorage immediately before redirecting
+    // Save to localStorage first
     localStorage.setItem('pasaViewMode', newMode);
-    setViewMode(newMode);
 
-    // Redirect to appropriate page based on mode
-    setTimeout(() => {
-      if (newMode === 'buyer') {
-        window.location.href = '/';
-      } else {
-        window.location.href = '/seller-dashboard';
-      }
-    }, 300);
+    // Force full page reload to the appropriate page
+    if (newMode === 'buyer') {
+      window.location.replace('/');
+    } else {
+      window.location.replace('/seller-dashboard');
+    }
   };
 
   return (
