@@ -94,7 +94,25 @@ export const TERMINOLOGY = {
   weatherWidget: 'Weather',
   exchangeRates: 'Live Exchange Rates',
   motivationalGoal: 'Your Goal',
-  vacationMode: 'Vacation Mode'
+  vacationMode: 'Vacation Mode',
+
+  // Trust & Verification (NEW)
+  idVerification: 'ID Verification',
+  faceVerification: 'Face Verification',
+  verifiedSeller: 'Verified Seller',
+  trustScore: 'Trust Score',
+  buyerFeedback: 'Buyer Feedback',
+  travelerPledge: 'Traveler Pledge',
+  escrowProtection: 'Escrow Protection',
+  reportIssue: 'Report an Issue',
+  disputeCenter: 'Dispute Center',
+  insuranceOptIn: 'Insurance Coverage',
+  travelInsurance: 'Travel Insurance',
+  payoutMethod: 'Payout Method',
+  mobileVerification: 'Mobile Number Verification',
+  languagesSpoken: 'Languages Spoken',
+  membershipTier: 'Membership Tier',
+  upgradeAccount: 'Upgrade Account'
 };
 
 export const ERROR_MESSAGES = {
