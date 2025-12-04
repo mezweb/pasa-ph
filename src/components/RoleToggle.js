@@ -11,7 +11,11 @@ export default function RoleToggle() {
     setIsAnimating(true);
     const newMode = viewMode === 'buyer' ? 'seller' : 'buyer';
     setViewMode(newMode);
-    setTimeout(() => setIsAnimating(false), 300);
+
+    // Force page reload to show correct dashboard/view
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
 
   return (
