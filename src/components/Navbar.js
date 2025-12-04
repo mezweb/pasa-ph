@@ -75,7 +75,17 @@ export default function Navbar() {
   };
 
   const toggleMode = () => {
-    toggleViewMode();
+    const newMode = viewMode === 'buyer' ? 'seller' : 'buyer';
+
+    // Save to localStorage first
+    localStorage.setItem('pasaViewMode', newMode);
+
+    // Force full page reload to the appropriate page
+    if (newMode === 'buyer') {
+      window.location.replace('/');
+    } else {
+      window.location.replace('/seller-dashboard');
+    }
   };
 
   const itemCount = (!user || !isSellerMode) ? cart.length : pasaBag.length;
