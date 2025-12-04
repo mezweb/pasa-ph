@@ -9,6 +9,9 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import RequestCard from '../../components/RequestCard';
 import MarketplaceControls from '../../components/MarketplaceControls';
+import WeatherWidget from '../../components/WeatherWidget';
+import ExchangeRateTicker from '../../components/ExchangeRateTicker';
+import MotivationalGoal from '../../components/MotivationalGoal';
 import Link from 'next/link';
 
 export default function SellerDashboard() {
@@ -21,6 +24,15 @@ export default function SellerDashboard() {
   const [vacationMode, setVacationMode] = useState(false);
   const [luggageWeight, setLuggageWeight] = useState(20);
 
+  // Dashboard preferences
+  const [dismissedWidgets, setDismissedWidgets] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dismissedWidgets');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
   // Marketplace controls state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
@@ -32,6 +44,7 @@ export default function SellerDashboard() {
   const profileStrength = 65;
   const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
   const totalBalance = 15800;
+  const currentTripDestination = 'Tokyo'; // For weather widget
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -48,7 +61,6 @@ export default function SellerDashboard() {
       const items = snapshot.docs.map(doc => {
         const data = doc.data();
 
-        // Determine delivery location based on destination
         const getDeliveryLocation = (to) => {
           const locations = ['Makati', 'BGC', 'Quezon City', 'Manila', 'Pasig', 'Ortigas'];
           return locations[Math.floor(Math.random() * locations.length)];
@@ -57,7 +69,6 @@ export default function SellerDashboard() {
         return {
           id: doc.id,
           ...data,
-          // Enhanced fields
           deliveryLocation: data.deliveryLocation || getDeliveryLocation(data.to),
           color: data.color || null,
           capacity: data.capacity || null,
@@ -84,7 +95,6 @@ export default function SellerDashboard() {
   const filteredAndSortedRequests = useMemo(() => {
     let filtered = [...requests];
 
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(req =>
@@ -95,7 +105,6 @@ export default function SellerDashboard() {
       );
     }
 
-    // Region filter
     if (regionFilter !== 'all') {
       if (regionFilter === 'metro-manila') {
         const metroManilaAreas = ['Makati', 'BGC', 'Taguig', 'Quezon City', 'Manila', 'Pasig', 'Ortigas', 'Mandaluyong'];
@@ -114,7 +123,6 @@ export default function SellerDashboard() {
       }
     }
 
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'profit-high':
@@ -147,21 +155,61 @@ export default function SellerDashboard() {
 
   const highValueRequests = filteredAndSortedRequests.filter(req => (req.price || 0) >= 2000);
   const standardRequests = filteredAndSortedRequests.filter(req => (req.price || 0) < 2000);
-  const totalPotentialEarnings = requests.reduce((sum, req) => sum + (req.price || 0), 0);
 
-  // To-do list items
+  // Feature 3: Renamed from totalPotentialEarnings to projectedProfit
+  const projectedProfit = requests.reduce((sum, req) => sum + ((req.estimatedProfit || 0)), 0);
+
+  // Feature 1: Clickable to-do items with specific links
   const todoItems = [
-    { text: 'Confirm 2 pending orders', count: 2, urgent: true },
-    { text: 'Update your travel schedule', count: 1, urgent: false },
-    { text: 'Respond to 3 messages', count: 3, urgent: true },
-    { text: 'Complete identity verification', count: 1, urgent: !isVerified }
+    {
+      text: 'Confirm 2 pending orders',
+      count: 2,
+      urgent: true,
+      link: '/fulfillment-list?filter=to-buy'
+    },
+    {
+      text: 'Update your travel schedule',
+      count: 1,
+      urgent: false,
+      link: '/start-selling'
+    },
+    {
+      text: 'Respond to 3 messages',
+      count: 3,
+      urgent: true,
+      link: '/messages'
+    },
+    {
+      text: 'Complete identity verification',
+      count: 1,
+      urgent: !isVerified,
+      link: '/settings/profile'
+    }
   ];
 
-  // Notifications
+  // Feature 4: Actionable notifications with specific links
   const notifications = [
-    { id: 1, text: 'New order request for iPhone 15', time: '5 min ago', type: 'order' },
-    { id: 2, text: 'Payment received for Order #1234', time: '2 hours ago', type: 'payment' },
-    { id: 3, text: 'Message from buyer about delivery', time: '4 hours ago', type: 'message' }
+    {
+      id: 1,
+      text: 'New order request for iPhone 15',
+      time: '5 min ago',
+      type: 'order',
+      link: '#standard-requests' // Scroll to marketplace
+    },
+    {
+      id: 2,
+      text: 'Payment received for Order #1234',
+      time: '2 hours ago',
+      type: 'payment',
+      link: '/fulfillment-list?orderId=1234'
+    },
+    {
+      id: 3,
+      text: 'Message from buyer about delivery',
+      time: '4 hours ago',
+      type: 'message',
+      link: '/messages?userId=buyer123'
+    }
   ];
 
   // Most requested items
@@ -192,7 +240,6 @@ export default function SellerDashboard() {
         acceptedAt: serverTimestamp()
       });
       alert(`Request ${title} ACCEPTED!`);
-      // Remove from selected if in bulk mode
       setSelectedRequests(prev => prev.filter(reqId => reqId !== id));
     } catch (error) {
       console.error("Error accepting request:", error);
@@ -205,7 +252,6 @@ export default function SellerDashboard() {
     if (!confirm(`Accept ${selectedRequests.length} requests at once?`)) return;
 
     const promises = selectedRequests.map(id => {
-      const req = requests.find(r => r.id === id);
       return updateDoc(doc(db, "requests", id), {
         status: 'Accepted',
         sellerId: user.uid,
@@ -234,6 +280,17 @@ export default function SellerDashboard() {
     });
   };
 
+  // Feature 7: Dismiss widget functionality
+  const handleDismissWidget = (widgetName) => {
+    const updated = [...dismissedWidgets, widgetName];
+    setDismissedWidgets(updated);
+    localStorage.setItem('dismissedWidgets', JSON.stringify(updated));
+  };
+
+  const isWidgetDismissed = (widgetName) => {
+    return dismissedWidgets.includes(widgetName);
+  };
+
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
 
   return (
@@ -242,7 +299,7 @@ export default function SellerDashboard() {
       <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px' }}>
         <div className="container" style={{ padding: '40px 20px' }}>
 
-          {/* Header + Post Trip Button */}
+          {/* Header with TWO prominent CTAs */}
           <div style={{
             background: 'linear-gradient(135deg, #0070f3 0%, #0051cc 100%)',
             padding: '30px',
@@ -263,138 +320,187 @@ export default function SellerDashboard() {
                 Welcome back, {user?.displayName || 'Traveler'}!
               </p>
             </div>
-            <Link href="/start-selling">
-              <button style={{
-                background: 'white',
-                color: '#0070f3',
-                border: 'none',
-                padding: '18px 36px',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '1.2rem',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                transition: 'transform 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                ✈️ Post a Trip
-              </button>
-            </Link>
+
+            {/* Feature 6: Register Trip button prominently placed */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <Link href="/start-selling">
+                <button style={{
+                  background: '#ff9800',
+                  color: 'white',
+                  border: 'none',
+                  padding: '18px 36px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '1.2rem',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span>✈️</span>
+                  <span>Register Trip</span>
+                </button>
+              </Link>
+
+              <Link href="/fulfillment-list">
+                <button style={{
+                  background: 'white',
+                  color: '#0070f3',
+                  border: 'none',
+                  padding: '18px 36px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '1.2rem',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  📋 View Orders
+                </button>
+              </Link>
+            </div>
           </div>
+
+          {/* Feature 9: Exchange Rate Ticker */}
+          <ExchangeRateTicker />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px', marginBottom: '30px' }}>
 
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* Profile Strength */}
-              <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📊 Profile Strength</h3>
-                  <span style={{ fontSize: '1.3rem', fontWeight: 'bold', color: profileStrength >= 80 ? '#2e7d32' : '#f97316' }}>
-                    {profileStrength}%
-                  </span>
+              {/* Feature 2: Clickable Profile Strength */}
+              <Link href="/settings/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div style={{
+                  background: 'white',
+                  padding: '25px',
+                  borderRadius: '12px',
+                  border: '1px solid #eaeaea',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.borderColor = '#0070f3';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = '#eaeaea';
+                }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📊 Profile Strength</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.3rem', fontWeight: 'bold', color: profileStrength >= 80 ? '#2e7d32' : '#f97316' }}>
+                        {profileStrength}%
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#0070f3' }}>→</span>
+                    </div>
+                  </div>
+                  <div style={{ width: '100%', height: '12px', background: '#f0f0f0', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${profileStrength}%`,
+                      height: '100%',
+                      background: profileStrength >= 80 ? 'linear-gradient(90deg, #2e7d32, #4caf50)' : 'linear-gradient(90deg, #f97316, #fb923c)',
+                      transition: 'width 0.5s ease'
+                    }} />
+                  </div>
+                  <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#666' }}>
+                    <div>✅ ID Verified</div>
+                    <div>✅ Email Confirmed</div>
+                    <div>⏳ Add payment method (+15%)</div>
+                    <div>⏳ Complete 5 orders (+20%)</div>
+                  </div>
+                  <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#0070f3', fontWeight: '600' }}>
+                    Click to improve your profile →
+                  </div>
                 </div>
-                <div style={{ width: '100%', height: '12px', background: '#f0f0f0', borderRadius: '6px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${profileStrength}%`,
-                    height: '100%',
-                    background: profileStrength >= 80 ? 'linear-gradient(90deg, #2e7d32, #4caf50)' : 'linear-gradient(90deg, #f97316, #fb923c)',
-                    transition: 'width 0.5s ease'
-                  }} />
-                </div>
-                <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#666' }}>
-                  <div>✅ ID Verified</div>
-                  <div>✅ Email Confirmed</div>
-                  <div>⏳ Add payment method (+15%)</div>
-                  <div>⏳ Complete 5 orders (+20%)</div>
-                </div>
-              </div>
+              </Link>
 
-              {/* Total Potential Earnings */}
+              {/* Feature 3: Renamed to "Projected Profit" */}
               <div style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  💰 Total Potential Earnings
+                  💰 Projected Profit
                 </div>
                 <div style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '5px' }}>
-                  ₱{totalPotentialEarnings.toLocaleString()}
+                  ₱{projectedProfit.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.85rem', opacity: '0.9' }}>
                   From {requests.length} open requests available
                 </div>
               </div>
 
-              {/* To-Do List */}
+              {/* Feature 1: Clickable To-Do List */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>📋 To-Do List</h3>
                 {todoItems.map((item, idx) => (
-                  <div key={idx} style={{
-                    padding: '12px',
-                    background: item.urgent ? '#fff3e0' : '#f9f9f9',
-                    borderRadius: '8px',
-                    marginBottom: '10px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      {item.urgent && <span style={{ color: '#f97316', marginRight: '6px' }}>⚠️</span>}
-                      <span style={{ fontSize: '0.9rem' }}>{item.text}</span>
+                  <Link key={idx} href={item.link} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{
+                      padding: '12px',
+                      background: item.urgent ? '#fff3e0' : '#f9f9f9',
+                      borderRadius: '8px',
+                      marginBottom: '10px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = item.urgent ? '#ffe0b2' : '#e3f2fd';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = item.urgent ? '#fff3e0' : '#f9f9f9';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
+                    >
+                      <div>
+                        {item.urgent && <span style={{ color: '#f97316', marginRight: '6px' }}>⚠️</span>}
+                        <span style={{ fontSize: '0.9rem' }}>{item.text}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {item.count > 0 && (
+                          <span style={{
+                            background: item.urgent ? '#f97316' : '#0070f3',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontWeight: 'bold'
+                          }}>
+                            {item.count}
+                          </span>
+                        )}
+                        <span style={{ color: '#999', fontSize: '0.8rem' }}>→</span>
+                      </div>
                     </div>
-                    {item.count > 0 && (
-                      <span style={{
-                        background: item.urgent ? '#f97316' : '#0070f3',
-                        color: 'white',
-                        fontSize: '0.7rem',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontWeight: 'bold'
-                      }}>
-                        {item.count}
-                      </span>
-                    )}
-                  </div>
+                  </Link>
                 ))}
               </div>
 
-              {/* Verify Identity */}
-              {!isVerified && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-                  padding: '25px',
-                  borderRadius: '12px',
-                  color: 'white',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔐</div>
-                  <h3 style={{ margin: '0 0 10px' }}>Verify Your Identity</h3>
-                  <p style={{ fontSize: '0.9rem', opacity: 0.95, marginBottom: '15px' }}>
-                    Increase trust and unlock premium features
-                  </p>
-                  <button
-                    onClick={() => setIsVerified(true)}
-                    style={{
-                      background: 'white',
-                      color: '#ee5a6f',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      fontSize: '1rem'
-                    }}
-                  >
-                    Start Verification
-                  </button>
-                </div>
-              )}
+              {/* Feature 10: Motivational Goal */}
+              <MotivationalGoal
+                currentEarnings={weeklyEarnings.reduce((a, b) => a + b, 0)}
+                flightCost={20000}
+                goalName="Pay off your next flight!"
+              />
 
             </div>
 
             {/* Right Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+
+              {/* Feature 8: Weather Widget */}
+              <WeatherWidget destination={currentTripDestination} />
 
               {/* Weekly Earnings Graph */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
@@ -426,29 +532,32 @@ export default function SellerDashboard() {
                 </div>
               </div>
 
-              {/* Notifications */}
+              {/* Feature 4: Actionable Notifications */}
               <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
                 <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔔 Recent Notifications</h3>
                 {notifications.map(notif => (
-                  <div key={notif.id} style={{
-                    padding: '12px',
-                    borderBottom: '1px solid #f0f0f0',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = '#f9f9f9'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'white'}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                        {notif.type === 'order' && '📦'}
-                        {notif.type === 'payment' && '💵'}
-                        {notif.type === 'message' && '💬'}
-                        {' '}{notif.text}
-                      </span>
+                  <Link key={notif.id} href={notif.link} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{
+                      padding: '12px',
+                      borderBottom: '1px solid #f0f0f0',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f9f9f9'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                          {notif.type === 'order' && '📦'}
+                          {notif.type === 'payment' && '💵'}
+                          {notif.type === 'message' && '💬'}
+                          {' '}{notif.text}
+                        </span>
+                        <span style={{ color: '#0070f3', fontSize: '0.75rem' }}>→</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#999' }}>{notif.time}</div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{notif.time}</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
@@ -491,55 +600,85 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* Seller Tier Progress */}
-          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', marginBottom: '25px' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>🏆 Seller Tier Progress</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
-              <div style={{
-                padding: '8px 16px',
-                background: userTier === 'Standard' ? '#666' : '#e0e0e0',
-                color: userTier === 'Standard' ? 'white' : '#999',
-                borderRadius: '20px',
-                fontWeight: 'bold',
-                fontSize: '0.9rem'
-              }}>
-                ⭐ Standard
+          {/* Feature 7: Dismissible Seller Tier Progress */}
+          {!isWidgetDismissed('seller-tier') && (
+            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', marginBottom: '25px', position: 'relative' }}>
+              <button
+                onClick={() => handleDismissWidget('seller-tier')}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  color: '#999',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#f0f0f0';
+                  e.currentTarget.style.color = '#666';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = '#999';
+                }}
+                title="Dismiss this widget"
+              >
+                ×
+              </button>
+
+              <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>🏆 Seller Tier Progress</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                <div style={{
+                  padding: '8px 16px',
+                  background: userTier === 'Standard' ? '#666' : '#e0e0e0',
+                  color: userTier === 'Standard' ? 'white' : '#999',
+                  borderRadius: '20px',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem'
+                }}>
+                  ⭐ Standard
+                </div>
+                <span style={{ color: '#999' }}>→</span>
+                <div style={{
+                  padding: '8px 16px',
+                  background: userTier === 'Gold' ? '#d4af37' : '#e0e0e0',
+                  color: userTier === 'Gold' ? 'white' : '#999',
+                  borderRadius: '20px',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem'
+                }}>
+                  💎 Gold
+                </div>
+                <span style={{ color: '#999' }}>→</span>
+                <div style={{
+                  padding: '8px 16px',
+                  background: userTier === 'Platinum' ? '#b9f2ff' : '#e0e0e0',
+                  color: userTier === 'Platinum' ? '#0077b6' : '#999',
+                  borderRadius: '20px',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem'
+                }}>
+                  💠 Platinum
+                </div>
               </div>
-              <span style={{ color: '#999' }}>→</span>
-              <div style={{
-                padding: '8px 16px',
-                background: userTier === 'Gold' ? '#d4af37' : '#e0e0e0',
-                color: userTier === 'Gold' ? 'white' : '#999',
-                borderRadius: '20px',
-                fontWeight: 'bold',
-                fontSize: '0.9rem'
-              }}>
-                💎 Gold
+              <div style={{ background: '#f0f0f0', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
+                <div style={{
+                  width: userTier === 'Standard' ? '30%' : userTier === 'Gold' ? '70%' : '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #0070f3, #00b4d8)',
+                  transition: 'width 0.5s ease'
+                }} />
               </div>
-              <span style={{ color: '#999' }}>→</span>
-              <div style={{
-                padding: '8px 16px',
-                background: userTier === 'Platinum' ? '#b9f2ff' : '#e0e0e0',
-                color: userTier === 'Platinum' ? '#0077b6' : '#999',
-                borderRadius: '20px',
-                fontWeight: 'bold',
-                fontSize: '0.9rem'
-              }}>
-                💠 Platinum
+              <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                Complete <strong>7 more orders</strong> to reach Gold tier and unlock exclusive high-value requests!
               </div>
             </div>
-            <div style={{ background: '#f0f0f0', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
-              <div style={{
-                width: userTier === 'Standard' ? '30%' : userTier === 'Gold' ? '70%' : '100%',
-                height: '100%',
-                background: 'linear-gradient(90deg, #0070f3, #00b4d8)',
-                transition: 'width 0.5s ease'
-              }} />
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#666' }}>
-              Complete <strong>7 more orders</strong> to reach Gold tier and unlock exclusive high-value requests!
-            </div>
-          </div>
+          )}
 
           {/* Bottom Row - Utilities */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' }}>
@@ -634,7 +773,7 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* Vacation Mode + Payout + Guidelines */}
+          {/* Vacation Mode + Feature 5: Withdraw Button + Guidelines */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px', marginBottom: '40px' }}>
 
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
@@ -659,6 +798,7 @@ export default function SellerDashboard() {
               </button>
             </div>
 
+            {/* Feature 5: Available Balance with Withdraw Button */}
             <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: '1.1rem' }}>💳 Available Balance</h3>
               <div style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '15px' }}>
@@ -675,10 +815,18 @@ export default function SellerDashboard() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 'bold',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s'
                 }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                Withdraw to GCash / Bank
+                <span>💸</span>
+                <span>Withdraw Funds</span>
               </button>
             </div>
 
@@ -775,7 +923,7 @@ export default function SellerDashboard() {
           </div>
 
           {/* Standard Requests */}
-          <div>
+          <div id="standard-requests">
             <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>Standard Requests</h2>
             {loading ? (
               <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Loading requests...</p>

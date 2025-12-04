@@ -82,7 +82,19 @@ export const TERMINOLOGY = {
   payoutBreakdown: 'Payout Breakdown',
   meetup: 'Meetup',
   shipping: 'Shipping',
-  markAsBought: 'Mark as Bought'
+  markAsBought: 'Mark as Bought',
+
+  // Dashboard Specific (NEW)
+  projectedProfit: 'Projected Profit',
+  registerTrip: 'Register Trip',
+  withdrawFunds: 'Withdraw Funds',
+  availableBalance: 'Available Balance',
+  profileStrength: 'Profile Strength',
+  sellerTier: 'Seller Tier Progress',
+  weatherWidget: 'Weather',
+  exchangeRates: 'Live Exchange Rates',
+  motivationalGoal: 'Your Goal',
+  vacationMode: 'Vacation Mode'
 };
 
 export const ERROR_MESSAGES = {
