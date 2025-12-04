@@ -27,7 +27,8 @@ export default function StartSellingPage() {
     focusCountries: ['Japan'],
     categories: ['Food'],
     bio: '',
-    instagram: ''
+    instagram: '',
+    languages: ['English', 'Filipino']
   });
 
   useEffect(() => {
@@ -100,6 +101,15 @@ export default function StartSellingPage() {
     }));
   };
 
+  const toggleLanguage = (language) => {
+    setFormData(prev => ({
+      ...prev,
+      languages: prev.languages.includes(language)
+        ? prev.languages.filter(l => l !== language)
+        : [...prev.languages, language]
+    }));
+  };
+
   const handleCompleteSetup = async () => {
     setIsSaving(true);
     try {
@@ -117,6 +127,7 @@ export default function StartSellingPage() {
         address: formData.address,
         phoneNumber: formData.phoneNumber,
         bio: formData.bio,
+        languages: formData.languages,
 
         // Selling Preferences
         focusCountries: formData.focusCountries,
@@ -351,6 +362,35 @@ export default function StartSellingPage() {
                         />
                     </div>
 
+                    {/* Languages Spoken */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>
+                            Languages Spoken <span style={{ fontSize: '0.85rem', fontWeight: 'normal', color: '#666' }}>(Select all that apply)</span>
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
+                            {['English', 'Filipino', 'Tagalog', 'Cebuano', 'Japanese', 'Korean', 'Mandarin', 'Spanish'].map(language => (
+                                <button
+                                    key={language}
+                                    type="button"
+                                    onClick={() => toggleLanguage(language)}
+                                    style={{
+                                        padding: 'clamp(10px, 2.5vw, 12px)',
+                                        border: `2px solid ${formData.languages.includes(language) ? '#0070f3' : '#ddd'}`,
+                                        background: formData.languages.includes(language) ? '#f0f9ff' : 'white',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: formData.languages.includes(language) ? 'bold' : 'normal',
+                                        color: formData.languages.includes(language) ? '#0070f3' : '#333',
+                                        fontSize: 'clamp(0.85rem, 2vw, 0.9rem)',
+                                        transition: '0.2s'
+                                    }}
+                                >
+                                    {formData.languages.includes(language) ? '✓ ' : ''}{language}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', gap: '10px' }}>
                         <button onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 'clamp(0.9rem, 2vw, 1rem)' }}>Back</button>
                         <button
@@ -390,6 +430,7 @@ export default function StartSellingPage() {
                         <div style={{ fontSize: 'clamp(0.9rem, 2vw, 1rem)', lineHeight: '1.8' }}>
                             <div><strong>Countries:</strong> {formData.focusCountries.join(', ')}</div>
                             <div><strong>Categories:</strong> {formData.categories.join(', ')}</div>
+                            {formData.languages && formData.languages.length > 0 && <div><strong>Languages:</strong> {formData.languages.join(', ')}</div>}
                             {formData.bio && <div><strong>Bio:</strong> {formData.bio}</div>}
                             {formData.instagram && <div><strong>Instagram:</strong> @{formData.instagram.replace('@', '')}</div>}
                         </div>
