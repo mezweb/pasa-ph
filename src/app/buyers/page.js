@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, where } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
@@ -14,34 +14,19 @@ export default function BuyersPage() {
   const router = useRouter();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userTier, setUserTier] = useState('Standard'); // Mock Tier
-  const [focusCountry, setFocusCountry] = useState('Japan');
-  const [secondaryCountry, setSecondaryCountry] = useState('USA'); // For Gold tier
+  const [filter, setFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock logic to determine accessible countries based on tier
-  // Standard: Focus Country only
-  // Gold: Focus + Secondary
-  // Diamond: All
-  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.push('/login');
         return;
       }
-      
-      // Fetch Seller Profile to get Focus Country
-      const docRef = doc(db, "users", currentUser.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setFocusCountry(docSnap.data().focusCountry || 'Japan');
-        // For demo, we assume secondary is USA if not set
-      }
     });
 
-    // Fetch ALL requests (filtering happens in UI for this MVP)
-    // In a real app with massive data, you'd query Firestore directly for specific countries
-    const q = query(collection(db, "requests"));
+    // Fetch all active buyer requests
+    const q = query(collection(db, "requests"), orderBy("createdAt", "desc"));
     const unsubscribeRequests = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRequests(items);
@@ -54,89 +39,199 @@ export default function BuyersPage() {
     };
   }, [router]);
 
-  // Filter Logic Based on Tier
-  const getFilteredRequests = () => {
-    if (userTier === 'Diamond') return requests; // Unlimited access
-    if (userTier === 'Gold') {
-        return requests.filter(req => req.from === focusCountry || req.from === secondaryCountry);
-    }
-    // Standard
-    return requests.filter(req => req.from === focusCountry);
-  };
+  // Filter requests by country and search query
+  const filteredRequests = requests.filter(req => {
+    const matchesFilter = filter === 'All' || req.from === filter;
+    const matchesSearch = !searchQuery ||
+      req.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.from?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.to?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  const filteredRequests = getFilteredRequests();
+  const countries = ['All', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'];
 
   return (
     <>
       <Navbar />
-      
-      {/* Header */}
-      <div style={{ background: '#111', color: 'white', padding: '40px 0' }}>
+
+      {/* Hero Section */}
+      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '60px 20px' }}>
         <div className="container">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', margin: 0 }}>Active Buyers</h1>
-                    <p style={{ opacity: 0.7, marginTop: '5px' }}>
-                        People looking for items from <strong>{userTier === 'Diamond' ? 'Everywhere' : focusCountry}</strong>
-                        {userTier === 'Gold' && <span> & {secondaryCountry}</span>}
-                    </p>
-                </div>
-                
-                {/* Tier Simulator */}
-                <div style={{ background: '#333', padding: '10px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#ccc' }}>View as:</span>
-                    <select 
-                        value={userTier} 
-                        onChange={(e) => setUserTier(e.target.value)}
-                        style={{ background: 'black', color: 'white', border: '1px solid #555', padding: '5px 10px', borderRadius: '4px' }}
-                    >
-                        <option value="Standard">Standard (1 Country)</option>
-                        <option value="Gold">Gold (2 Countries)</option>
-                        <option value="Diamond">Diamond (Unlimited)</option>
-                    </select>
-                </div>
-            </div>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', fontWeight: '900', margin: '0 0 15px', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+            🛍️ Active Buyer Requests
+          </h1>
+          <p style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', opacity: 0.95, maxWidth: '700px', margin: 0, lineHeight: '1.6' }}>
+            Browse requests from shoppers looking for items from abroad. Accept orders and earn money on your next trip!
+          </p>
         </div>
       </div>
 
-      <div className="container" style={{ padding: '40px 20px', minHeight: '60vh' }}>
-        
-        {/* Tier Upsell Banner */}
-        {userTier === 'Standard' && (
-            <div style={{ background: '#f0f0f0', border: '1px solid #ccc', padding: '15px 20px', borderRadius: '8px', marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.5rem' }}>ℹ️</span>
-                    <div>
-                        <strong>Standard View:</strong> Showing buyers for <u>{focusCountry}</u> only.
-                        <span style={{ display: 'block', fontSize: '0.85rem', color: '#666' }}>Upgrade to Gold to unlock a second destination, or Diamond for worldwide access.</span>
-                    </div>
-                </div>
-                <Link href="/how-it-works" className="btn-primary" style={{ fontSize: '0.85rem', padding: '8px 15px' }}>Upgrade</Link>
-            </div>
-        )}
+      {/* Search & Filter Bar */}
+      <div style={{ background: 'white', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div className="container" style={{ padding: '20px' }}>
 
-        <div className="card-grid">
-            {loading && <p>Loading buyers...</p>}
+          {/* Search Box */}
+          <div style={{ marginBottom: '20px' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search by item, country, or destination..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                fontSize: '1rem',
+                border: '2px solid #eaeaea',
+                borderRadius: '12px',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#0070f3'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#eaeaea'}
+            />
+          </div>
 
-            {!loading && filteredRequests.map(req => (
-                <Link href={`/requests/${req.id}`} key={req.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <Card 
-                        title={req.title}
-                        subtitle={`${req.from} → ${req.to}`}
-                        price={`Willing to Pay: ₱${req.price}`}
-                        image={req.image}
-                        type="request"
-                        badge="Buyer Request"
-                    />
-                </Link>
+          {/* Country Filter Tabs */}
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+            {countries.map(country => (
+              <button
+                key={country}
+                onClick={() => setFilter(country)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '25px',
+                  border: 'none',
+                  background: filter === country ? '#0070f3' : '#f8f9fa',
+                  color: filter === country ? 'white' : '#666',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                  boxShadow: filter === country ? '0 4px 12px rgba(0,112,243,0.3)' : 'none'
+                }}
+              >
+                {country}
+              </button>
             ))}
-
-            {!loading && filteredRequests.length === 0 && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '50px', color: '#888' }}>
-                    No active buyers found for {focusCountry}. Try changing your focus country in Profile or upgrading your tier.
-                </div>
-            )}
+          </div>
         </div>
+      </div>
+
+      {/* Results Section */}
+      <div className="container" style={{ padding: '40px 20px', minHeight: '60vh' }}>
+
+        {/* Results Count */}
+        <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '0 0 5px', color: '#333' }}>
+              {filteredRequests.length} {filteredRequests.length === 1 ? 'Request' : 'Requests'} Available
+            </h2>
+            <p style={{ color: '#666', fontSize: '0.95rem', margin: 0 }}>
+              {filter === 'All' ? 'Showing all countries' : `Showing requests from ${filter}`}
+            </p>
+          </div>
+
+          {/* Quick Stats */}
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0070f3' }}>{requests.length}</div>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#2e7d32' }}>{filteredRequests.length}</div>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtered</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards Grid */}
+        <div className="card-grid">
+          {loading && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '15px' }}>⏳</div>
+              <p style={{ color: '#999', fontSize: '1.1rem' }}>Loading buyer requests...</p>
+            </div>
+          )}
+
+          {!loading && filteredRequests.map(req => (
+            <Link href={`/requests/${req.id}`} key={req.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Card
+                title={req.title}
+                subtitle={`${req.from} → ${req.to}`}
+                price={`Willing to Pay: ₱${req.price?.toLocaleString() || '0'}`}
+                image={req.image}
+                type="request"
+                badge="Buyer Request"
+              />
+            </Link>
+          ))}
+
+          {!loading && filteredRequests.length === 0 && (
+            <div style={{
+              gridColumn: '1/-1',
+              textAlign: 'center',
+              padding: '80px 20px',
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+              borderRadius: '16px',
+              border: '2px dashed #ddd'
+            }}>
+              <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📭</div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '10px', color: '#333' }}>
+                No Requests Found
+              </h3>
+              <p style={{ color: '#666', fontSize: '1rem', marginBottom: '20px' }}>
+                {searchQuery ?
+                  `No requests match "${searchQuery}". Try a different search term.` :
+                  `No requests from ${filter === 'All' ? 'any country' : filter} at the moment. Check back soon!`
+                }
+              </p>
+              {(searchQuery || filter !== 'All') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilter('All');
+                  }}
+                  className="btn-primary"
+                  style={{ padding: '12px 30px' }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* CTA Section */}
+        {!loading && filteredRequests.length > 0 && (
+          <div style={{
+            marginTop: '60px',
+            padding: '40px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '16px',
+            textAlign: 'center',
+            color: 'white'
+          }}>
+            <h3 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '15px' }}>
+              💼 Ready to Start Earning?
+            </h3>
+            <p style={{ fontSize: '1.1rem', opacity: 0.95, marginBottom: '25px', maxWidth: '600px', margin: '0 auto 25px' }}>
+              Register your upcoming trip and start accepting orders. Turn your travel into income!
+            </p>
+            <Link href="/seller-dashboard">
+              <button className="btn-primary" style={{
+                background: 'white',
+                color: '#667eea',
+                padding: '16px 40px',
+                fontSize: '1.1rem',
+                fontWeight: '700',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+              }}>
+                Go to Dashboard →
+              </button>
+            </Link>
+          </div>
+        )}
 
       </div>
       <Footer />
