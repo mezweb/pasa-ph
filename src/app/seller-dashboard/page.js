@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
@@ -12,6 +12,7 @@ import MarketplaceControls from '../../components/MarketplaceControls';
 import WeatherWidget from '../../components/WeatherWidget';
 import ExchangeRateTicker from '../../components/ExchangeRateTicker';
 import MotivationalGoal from '../../components/MotivationalGoal';
+import Modal from '../../components/Modal';
 import Link from 'next/link';
 
 export default function SellerDashboard() {
@@ -37,6 +38,17 @@ export default function SellerDashboard() {
   const [regionFilter, setRegionFilter] = useState('all');
   const [showBulkSelect, setShowBulkSelect] = useState(false);
   const [selectedRequests, setSelectedRequests] = useState([]);
+
+  // Register Trip modal state
+  const [isRegisterTripOpen, setIsRegisterTripOpen] = useState(false);
+  const [isSubmittingTrip, setIsSubmittingTrip] = useState(false);
+  const [tripForm, setTripForm] = useState({
+    destination: 'Japan',
+    departureDate: '',
+    returnDate: '',
+    maxWeight: '23',
+    notes: ''
+  });
 
   // Mock data
   const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
@@ -257,13 +269,53 @@ export default function SellerDashboard() {
     return dismissedWidgets.includes(widgetName);
   };
 
+  // Handle Register Trip submission
+  const handleRegisterTrip = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert('Please log in to register a trip');
+      return;
+    }
+
+    setIsSubmittingTrip(true);
+    try {
+      await addDoc(collection(db, 'trips'), {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userEmail: user.email,
+        destination: tripForm.destination,
+        departureDate: tripForm.departureDate,
+        returnDate: tripForm.returnDate,
+        maxWeight: Number(tripForm.maxWeight),
+        notes: tripForm.notes,
+        status: 'active',
+        createdAt: serverTimestamp()
+      });
+
+      alert('Trip registered successfully!');
+      setIsRegisterTripOpen(false);
+      setTripForm({
+        destination: 'Japan',
+        departureDate: '',
+        returnDate: '',
+        maxWeight: '23',
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Error registering trip:', error);
+      alert('Failed to register trip. Please try again.');
+    } finally {
+      setIsSubmittingTrip(false);
+    }
+  };
+
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
 
   return (
     <>
       <Navbar />
       <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px' }}>
-        <div className="container" style={{ padding: '40px 20px' }}>
+        <div className="container" style={{ paddingTop: '40px', paddingBottom: '40px' }}>
 
           {/* Header with TWO prominent CTAs */}
           <div style={{
@@ -289,8 +341,9 @@ export default function SellerDashboard() {
 
             {/* Feature 6: Register Trip button prominently placed */}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <Link href="/start-selling">
-                <button style={{
+              <button
+                onClick={() => setIsRegisterTripOpen(true)}
+                style={{
                   background: '#ff9800',
                   color: 'white',
                   border: 'none',
@@ -307,11 +360,10 @@ export default function SellerDashboard() {
                 }}
                 onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <span>✈️</span>
-                  <span>Register Trip</span>
-                </button>
-              </Link>
+              >
+                <span>✈️</span>
+                <span>Register Trip</span>
+              </button>
 
               <Link href="/fulfillment-list">
                 <button style={{
@@ -668,6 +720,86 @@ export default function SellerDashboard() {
 
         </div>
       </div>
+
+      {/* Register Trip Modal */}
+      <Modal isOpen={isRegisterTripOpen} onClose={() => setIsRegisterTripOpen(false)} title="✈️ Register a New Trip">
+        <form onSubmit={handleRegisterTrip} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Destination Country *</label>
+            <select
+              required
+              value={tripForm.destination}
+              onChange={(e) => setTripForm({ ...tripForm, destination: e.target.value })}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
+            >
+              <option value="Japan">🇯🇵 Japan</option>
+              <option value="USA">🇺🇸 USA</option>
+              <option value="South Korea">🇰🇷 South Korea</option>
+              <option value="Singapore">🇸🇬 Singapore</option>
+              <option value="Hong Kong">🇭🇰 Hong Kong</option>
+              <option value="Vietnam">🇻🇳 Vietnam</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Departure Date *</label>
+              <input
+                type="date"
+                required
+                value={tripForm.departureDate}
+                onChange={(e) => setTripForm({ ...tripForm, departureDate: e.target.value })}
+                style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Return Date *</label>
+              <input
+                type="date"
+                required
+                value={tripForm.returnDate}
+                onChange={(e) => setTripForm({ ...tripForm, returnDate: e.target.value })}
+                style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Max Luggage Weight (kg) *</label>
+            <input
+              type="number"
+              required
+              min="1"
+              max="50"
+              value={tripForm.maxWeight}
+              onChange={(e) => setTripForm({ ...tripForm, maxWeight: e.target.value })}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
+              placeholder="e.g. 23"
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Additional Notes (Optional)</label>
+            <textarea
+              value={tripForm.notes}
+              onChange={(e) => setTripForm({ ...tripForm, notes: e.target.value })}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem', minHeight: '100px', resize: 'vertical', fontFamily: 'inherit' }}
+              placeholder="Any special information about your trip..."
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmittingTrip}
+            className="btn-primary"
+            style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '1.05rem', fontWeight: '700' }}
+          >
+            {isSubmittingTrip ? 'Registering...' : 'Register Trip'}
+          </button>
+        </form>
+      </Modal>
+
       <Footer />
     </>
   );
