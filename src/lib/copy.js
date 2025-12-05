@@ -15,7 +15,7 @@ export const TERMINOLOGY = {
   buyer: 'Shopper',
   buyers: 'Shoppers',
   preorder: 'Pasabuy Request',
-  preorders: 'Pasabuy Requests',
+  preorders: 'Pasabuy Request',
   outOfStock: 'Trip Ended',
   inStock: 'Available',
   serviceFee: "Traveler's Tip",
@@ -30,7 +30,13 @@ export const TERMINOLOGY = {
   inbox: 'Inbox',
   dashboard: 'Dashboard',
 
-  // Actions
+  // Profile & Settings (IMPROVED)
+  accountSettings: 'Your Traveler Profile',
+  baseCity: 'Where do you live?',
+  deliveryAddress: 'Delivery Address',
+  deliveryPrivacy: 'We only share this after purchase',
+
+  // Actions (IMPROVED)
   addToCart: 'Get it!',
   buy: 'Book it!',
   checkout: 'Confirm Order',
@@ -40,6 +46,10 @@ export const TERMINOLOGY = {
   acceptRequest: 'Accept Request',
   backToDashboard: 'Back to Dashboard',
   notifyMe: 'Notify me when buyers appear',
+  listItem: 'Publish Request',
+  saveChanges: 'Update Profile',
+  supportCenter: 'Help & Disputes',
+  howItWorks: 'Start here: Your First Trip',
 
   // Status
   pending: 'On the way',
@@ -165,7 +175,11 @@ export const BUTTON_TEXT = {
     exportList: 'Export Shopping List',
     messageBuyer: 'Message Buyer',
     removeItem: 'Remove Item',
-    markBought: 'Mark as Bought'
+    markBought: 'Mark as Bought',
+    // Improved Copy (IMPROVED)
+    listItem: 'Publish Request',
+    saveChanges: 'Update Profile',
+    updateProfile: 'Update Profile'
   },
   secondary: {
     viewMore: 'See more',
@@ -177,10 +191,24 @@ export const BUTTON_TEXT = {
   }
 };
 
+// Empty State Messages (IMPROVED)
+export const EMPTY_STATES = {
+  noBuyers: (region) => region ? `Quiet day in ${region}` : 'Quiet day here',
+  noSellers: (region) => region ? `No travelers heading to ${region} yet` : 'No travelers yet',
+  noRequests: 'Take a break - no new requests right now',
+  noOrders: 'Your orders will appear here',
+  noProducts: 'This shop is taking a break',
+  emptyCart: "Your cart is waiting for something special",
+  emptyWishlist: 'Start adding items you love',
+  noResults: (query) => query ? `No matches for "${query}"` : 'Try a different search',
+  quietDay: 'Quiet day here - check back soon!'
+};
+
 export const TOOLTIPS = {
   pasabuy: "Pasabuy means 'please buy for me'. A traveler going abroad buys items and brings them back for you - no markup, just a small tip!",
   escrow: "We hold payment until you receive your item. Safe and secure!",
-  serviceFee: "A small tip (10%) for the traveler who's bringing your item all the way from abroad.",
+  serviceFee: "A 10% tip for the traveler who's shopping, carrying, and delivering your item from abroad. This covers their effort, luggage space, and delivery time.",
+  serviceFeeShort: "10% tip for the traveler's time and effort",
   verification: "Verified travelers have confirmed their ID, phone, and email.",
   rating: "Based on past successful deliveries and customer reviews.",
 
@@ -210,4 +238,50 @@ export const getTimeBasedGreeting = () => {
   if (hour < 12) return GREETINGS.goodMorning;
   if (hour < 18) return GREETINGS.goodAfternoon;
   return GREETINGS.goodEvening;
+};
+
+// Currency Formatting Helper - Ensures Consistency
+export const formatCurrency = (amount, options = {}) => {
+  const {
+    showSymbol = true,
+    showDecimals = false,
+    compact = false
+  } = options;
+
+  // Remove any existing currency symbols and parse
+  const cleanAmount = typeof amount === 'string'
+    ? parseFloat(amount.replace(/[₱,PHP]/g, '').trim())
+    : amount;
+
+  if (isNaN(cleanAmount)) return '₱0';
+
+  // Compact notation for large numbers
+  if (compact && cleanAmount >= 1000000) {
+    return `₱${(cleanAmount / 1000000).toFixed(1)}M`;
+  }
+  if (compact && cleanAmount >= 1000) {
+    return `₱${(cleanAmount / 1000).toFixed(1)}K`;
+  }
+
+  // Format with commas
+  const formatted = showDecimals
+    ? cleanAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : Math.round(cleanAmount).toLocaleString('en-PH');
+
+  return showSymbol ? `₱${formatted}` : formatted;
+};
+
+// Microcopy for common UI elements
+export const MICROCOPY = {
+  deliveryPrivacy: 'We only share this after purchase',
+  securePayment: 'Your payment is protected by escrow',
+  verifiedBadge: 'ID and phone verified',
+  responseTime: 'Usually responds in 1 hour',
+  freeShipping: 'Free meetup within Metro Manila',
+  bulkDiscount: 'Save more with bulk orders',
+  urgentTag: 'Urgent - needed within 48 hours',
+  newSeller: 'New to Pasa.ph - give them a chance!',
+  topRated: 'Top-rated traveler',
+  fastDelivery: 'Fast delivery track record',
+  reliableProfile: 'Completed 10+ successful trips'
 };
