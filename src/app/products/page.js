@@ -16,6 +16,7 @@ export default function MarketplacePage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [focusCountry, setFocusCountry] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const { addToBag } = useCart();
@@ -49,11 +50,17 @@ export default function MarketplacePage() {
       filtered = filtered.filter(p => p.from === focusCountry);
     }
 
+    // Filter by category
+    if (categoryFilter !== 'All') {
+      filtered = filtered.filter(p => p.category === categoryFilter);
+    }
+
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(p =>
         p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.from?.toLowerCase().includes(searchQuery.toLowerCase())
+        p.from?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -71,6 +78,7 @@ export default function MarketplacePage() {
 
   const filteredProducts = getFilteredProducts();
   const countries = ['All', 'Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'];
+  const categories = ['All', 'Food', 'Beauty', 'Electronics', 'Fashion'];
 
   if (loading) {
     return (
@@ -122,31 +130,64 @@ export default function MarketplacePage() {
           </div>
 
           {/* Filters Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
 
-            {/* Country Filter Tabs */}
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px', flex: 1 }}>
-              {countries.map(country => (
-                <button
-                  key={country}
-                  onClick={() => setFocusCountry(country)}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '25px',
-                    border: 'none',
-                    background: focusCountry === country ? '#0070f3' : '#f8f9fa',
-                    color: focusCountry === country ? 'white' : '#666',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s',
-                    boxShadow: focusCountry === country ? '0 4px 12px rgba(0,112,243,0.3)' : 'none'
-                  }}
-                >
-                  {country}
-                </button>
-              ))}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {/* Country Filter Tabs */}
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Country</div>
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                  {countries.map(country => (
+                    <button
+                      key={country}
+                      onClick={() => setFocusCountry(country)}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '25px',
+                        border: 'none',
+                        background: focusCountry === country ? '#0070f3' : '#f8f9fa',
+                        color: focusCountry === country ? 'white' : '#666',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                        boxShadow: focusCountry === country ? '0 4px 12px rgba(0,112,243,0.3)' : 'none'
+                      }}
+                    >
+                      {country}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Filter Tabs */}
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</div>
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                  {categories.map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setCategoryFilter(category)}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '25px',
+                        border: 'none',
+                        background: categoryFilter === category ? '#2e7d32' : '#f8f9fa',
+                        color: categoryFilter === category ? 'white' : '#666',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                        boxShadow: categoryFilter === category ? '0 4px 12px rgba(46,125,50,0.3)' : 'none'
+                      }}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Sort Dropdown */}
@@ -205,26 +246,27 @@ export default function MarketplacePage() {
         {/* Product Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px' }}>
           {filteredProducts.map(product => (
-            <div
-              key={product.id}
-              style={{
-                border: '1px solid #eaeaea',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                background: 'white',
-                position: 'relative',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-              }}
-            >
+            <Link href={`/products/${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div
+                style={{
+                  border: '1px solid #eaeaea',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: 'white',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                }}
+              >
 
               {/* Hot Badge */}
               {product.isHot && (
@@ -302,9 +344,11 @@ export default function MarketplacePage() {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     addToBag(product);
-                    // Optional: Show success feedback
+                    alert('Added to your Pasa Bag! ✅');
                   }}
                 >
                   <span>🛒</span>
@@ -312,6 +356,7 @@ export default function MarketplacePage() {
                 </button>
               </div>
             </div>
+            </Link>
           ))}
 
           {/* Empty State */}
@@ -334,11 +379,12 @@ export default function MarketplacePage() {
                   `No products from ${focusCountry === 'All' ? 'any country' : focusCountry} at the moment.`
                 }
               </p>
-              {(searchQuery || focusCountry !== 'All') && (
+              {(searchQuery || focusCountry !== 'All' || categoryFilter !== 'All') && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setFocusCountry('All');
+                    setCategoryFilter('All');
                   }}
                   className="btn-primary"
                   style={{ padding: '12px 30px' }}
