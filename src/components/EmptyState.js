@@ -132,10 +132,33 @@ export default function EmptyState({
       padding: '60px 20px',
       background: 'white',
       borderRadius: '12px',
-      border: '1px solid #eee'
+      border: '1px solid #eee',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Pasa Logo Watermark */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '12rem',
+        opacity: 0.03,
+        pointerEvents: 'none',
+        zIndex: 0,
+        userSelect: 'none'
+      }}>
+        📦
+      </div>
+
       {/* Icon */}
-      <div style={{ fontSize: '4rem', marginBottom: '20px', opacity: 0.7 }}>
+      <div style={{
+        fontSize: '4rem',
+        marginBottom: '20px',
+        opacity: 0.7,
+        position: 'relative',
+        zIndex: 1
+      }}>
         {finalIcon}
       </div>
 
@@ -144,7 +167,9 @@ export default function EmptyState({
         fontSize: '1.3rem',
         fontWeight: 'bold',
         marginBottom: '10px',
-        color: '#333'
+        color: '#333',
+        position: 'relative',
+        zIndex: 1
       }}>
         {finalTitle}
       </h3>
