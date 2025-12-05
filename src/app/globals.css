@@ -5,10 +5,26 @@
   --bg: #f4f6f8;
   --white: #ffffff;
   --text: #111;
+  --text-medium: #333;
   --gray: #666;
+  --gray-dark: #444;
   --light-gray: #eaeaea;
   --border-radius: 8px;
   --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-card: 0 6px 16px rgba(0,0,0,0.12);
+  --shadow-hover: 0 8px 24px rgba(0,0,0,0.16);
+
+  /* Status Colors */
+  --status-open: #0070f3;
+  --status-progress: #ffc107;
+  --status-complete: #28a745;
+  --status-error: #dc3545;
+
+  /* Input Colors */
+  --input-text: #222;
+  --input-placeholder: #666;
+  --input-border: #ddd;
+  --input-border-focus: #0070f3;
 }
 
 * {
@@ -67,6 +83,50 @@ ul { list-style: none; }
 }
 .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
 
+/* Secondary Button - Outline Style */
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  padding: 10px 22px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: max(16px, 1rem);
+}
+.btn-secondary:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Upgrade Button - Secondary Style */
+.btn-upgrade {
+  background: transparent;
+  color: var(--gold);
+  border: 2px solid var(--gold);
+  padding: 10px 22px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: max(16px, 0.95rem);
+}
+.btn-upgrade:hover {
+  background: var(--gold);
+  color: white;
+  transform: translateY(-1px);
+}
+
 .btn-login {
   background: var(--text);
   color: white;
@@ -87,12 +147,21 @@ select {
   border-radius: var(--border-radius);
   outline: none;
   transition: border-color 0.2s;
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+  padding: 12px 15px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--primary);
+  border-color: var(--input-border-focus);
   outline: none;
 }
 
@@ -130,8 +199,13 @@ img[loading="lazy"].loaded {
   overflow: hidden;
   transition: all 0.2s ease;
   cursor: pointer;
+  box-shadow: var(--shadow-card);
 }
-.card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: #ccc; }
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+  border-color: #ccc;
+}
 
 .card-img {
   height: clamp(150px, 35vw, 180px);
@@ -140,9 +214,13 @@ img[loading="lazy"].loaded {
   background: #eee;
 }
 
-.card-body { padding: clamp(12px, 3vw, 15px); }
+.card-body { padding: clamp(15px, 3.5vw, 20px); }
 .card-title { font-size: clamp(1rem, 2.5vw, 1.1rem); font-weight: 700; margin-bottom: 5px; color: #333; }
-.card-price { font-weight: bold; color: var(--primary); font-size: clamp(1rem, 2.5vw, 1.1rem); }
+.card-price {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: clamp(1.25rem, 3vw, 1.4rem);
+}
 
 /* Sticky Search Bar */
 .sticky-search {
@@ -321,3 +399,75 @@ select:focus-visible {
     padding-top: max(0px, env(safe-area-inset-top));
   }
 }
+
+/* Status Badges - Distinct Colors */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.status-open {
+  background: #e3f2fd;
+  color: var(--status-open);
+  border: 1px solid var(--status-open);
+}
+
+.status-progress {
+  background: #fff8e1;
+  color: #f57f17;
+  border: 1px solid var(--status-progress);
+}
+
+.status-complete {
+  background: #e8f5e9;
+  color: var(--status-complete);
+  border: 1px solid var(--status-complete);
+}
+
+.status-error {
+  background: #ffebee;
+  color: var(--status-error);
+  border: 1px solid var(--status-error);
+}
+
+/* Summary Box - Increased Padding */
+.summary-box {
+  background: white;
+  border: 1px solid var(--light-gray);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.summary-box-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.summary-box-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--light-gray);
+  font-size: 1rem;
+}
+
+.summary-box-item:last-child {
+  border-bottom: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding-top: 16px;
+}
+
+/* Consistent Icon Sizes */
+.icon-sm { font-size: 1rem; }
+.icon-md { font-size: 1.25rem; }
+.icon-lg { font-size: 1.5rem; }
+.icon-xl { font-size: 2rem; }
