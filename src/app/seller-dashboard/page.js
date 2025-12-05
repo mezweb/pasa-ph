@@ -17,11 +17,9 @@ import Link from 'next/link';
 export default function SellerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [userTier, setUserTier] = useState('Standard');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
-  const [vacationMode, setVacationMode] = useState(false);
   const [luggageWeight, setLuggageWeight] = useState(20);
 
   // Dashboard preferences
@@ -41,7 +39,6 @@ export default function SellerDashboard() {
   const [selectedRequests, setSelectedRequests] = useState([]);
 
   // Mock data
-  const profileStrength = 65;
   const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
   const totalBalance = 15800;
   const currentTripDestination = 'Tokyo'; // For weather widget
@@ -153,39 +150,8 @@ export default function SellerDashboard() {
     return filtered;
   }, [requests, searchQuery, sortBy, regionFilter]);
 
-  const highValueRequests = filteredAndSortedRequests.filter(req => (req.price || 0) >= 2000);
-  const standardRequests = filteredAndSortedRequests.filter(req => (req.price || 0) < 2000);
-
   // Feature 3: Renamed from totalPotentialEarnings to projectedProfit
   const projectedProfit = requests.reduce((sum, req) => sum + ((req.estimatedProfit || 0)), 0);
-
-  // Feature 1: Clickable to-do items with specific links
-  const todoItems = [
-    {
-      text: 'Confirm 2 pending orders',
-      count: 2,
-      urgent: true,
-      link: '/fulfillment-list?filter=to-buy'
-    },
-    {
-      text: 'Update your travel schedule',
-      count: 1,
-      urgent: false,
-      link: '/start-selling'
-    },
-    {
-      text: 'Respond to 3 messages',
-      count: 3,
-      urgent: true,
-      link: '/messages'
-    },
-    {
-      text: 'Complete identity verification',
-      count: 1,
-      urgent: !isVerified,
-      link: '/settings/profile'
-    }
-  ];
 
   // Feature 4: Actionable notifications with specific links
   const notifications = [
@@ -377,54 +343,6 @@ export default function SellerDashboard() {
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* Feature 2: Clickable Profile Strength */}
-              <Link href="/settings/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{
-                  background: 'white',
-                  padding: '25px',
-                  borderRadius: '12px',
-                  border: '1px solid #eaeaea',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  e.currentTarget.style.borderColor = '#0070f3';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = '#eaeaea';
-                }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📊 Profile Strength</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.3rem', fontWeight: 'bold', color: profileStrength >= 80 ? '#2e7d32' : '#f97316' }}>
-                        {profileStrength}%
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: '#0070f3' }}>→</span>
-                    </div>
-                  </div>
-                  <div style={{ width: '100%', height: '12px', background: '#f0f0f0', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${profileStrength}%`,
-                      height: '100%',
-                      background: profileStrength >= 80 ? 'linear-gradient(90deg, #2e7d32, #4caf50)' : 'linear-gradient(90deg, #f97316, #fb923c)',
-                      transition: 'width 0.5s ease'
-                    }} />
-                  </div>
-                  <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#666' }}>
-                    <div>✅ ID Verified</div>
-                    <div>✅ Email Confirmed</div>
-                    <div>⏳ Add payment method (+15%)</div>
-                    <div>⏳ Complete 5 orders (+20%)</div>
-                  </div>
-                  <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#0070f3', fontWeight: '600' }}>
-                    Click to improve your profile →
-                  </div>
-                </div>
-              </Link>
-
               {/* Feature 3: Renamed to "Projected Profit" */}
               <div style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -436,55 +354,6 @@ export default function SellerDashboard() {
                 <div style={{ fontSize: '0.85rem', opacity: '0.9' }}>
                   From {requests.length} open requests available
                 </div>
-              </div>
-
-              {/* Feature 1: Clickable To-Do List */}
-              <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>📋 To-Do List</h3>
-                {todoItems.map((item, idx) => (
-                  <Link key={idx} href={item.link} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{
-                      padding: '12px',
-                      background: item.urgent ? '#fff3e0' : '#f9f9f9',
-                      borderRadius: '8px',
-                      marginBottom: '10px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = item.urgent ? '#ffe0b2' : '#e3f2fd';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = item.urgent ? '#fff3e0' : '#f9f9f9';
-                      e.currentTarget.style.transform = 'translateX(0)';
-                    }}
-                    >
-                      <div>
-                        {item.urgent && <span style={{ color: '#f97316', marginRight: '6px' }}>⚠️</span>}
-                        <span style={{ fontSize: '0.9rem' }}>{item.text}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {item.count > 0 && (
-                          <span style={{
-                            background: item.urgent ? '#f97316' : '#0070f3',
-                            color: 'white',
-                            fontSize: '0.7rem',
-                            padding: '3px 8px',
-                            borderRadius: '10px',
-                            fontWeight: 'bold'
-                          }}>
-                            {item.count}
-                          </span>
-                        )}
-                        <span style={{ color: '#999', fontSize: '0.8rem' }}>→</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
               </div>
 
               {/* Feature 10: Motivational Goal */}
@@ -600,86 +469,6 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* Feature 7: Dismissible Seller Tier Progress */}
-          {!isWidgetDismissed('seller-tier') && (
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea', marginBottom: '25px', position: 'relative' }}>
-              <button
-                onClick={() => handleDismissWidget('seller-tier')}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.2rem',
-                  cursor: 'pointer',
-                  color: '#999',
-                  padding: '5px 10px',
-                  borderRadius: '6px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = '#f0f0f0';
-                  e.currentTarget.style.color = '#666';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'none';
-                  e.currentTarget.style.color = '#999';
-                }}
-                title="Dismiss this widget"
-              >
-                ×
-              </button>
-
-              <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>🏆 Seller Tier Progress</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                <div style={{
-                  padding: '8px 16px',
-                  background: userTier === 'Standard' ? '#666' : '#e0e0e0',
-                  color: userTier === 'Standard' ? 'white' : '#999',
-                  borderRadius: '20px',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem'
-                }}>
-                  ⭐ Standard
-                </div>
-                <span style={{ color: '#999' }}>→</span>
-                <div style={{
-                  padding: '8px 16px',
-                  background: userTier === 'Gold' ? '#d4af37' : '#e0e0e0',
-                  color: userTier === 'Gold' ? 'white' : '#999',
-                  borderRadius: '20px',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem'
-                }}>
-                  💎 Gold
-                </div>
-                <span style={{ color: '#999' }}>→</span>
-                <div style={{
-                  padding: '8px 16px',
-                  background: userTier === 'Platinum' ? '#b9f2ff' : '#e0e0e0',
-                  color: userTier === 'Platinum' ? '#0077b6' : '#999',
-                  borderRadius: '20px',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem'
-                }}>
-                  💠 Platinum
-                </div>
-              </div>
-              <div style={{ background: '#f0f0f0', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
-                <div style={{
-                  width: userTier === 'Standard' ? '30%' : userTier === 'Gold' ? '70%' : '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #0070f3, #00b4d8)',
-                  transition: 'width 0.5s ease'
-                }} />
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                Complete <strong>7 more orders</strong> to reach Gold tier and unlock exclusive high-value requests!
-              </div>
-            </div>
-          )}
-
           {/* Bottom Row - Utilities */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' }}>
 
@@ -773,30 +562,8 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* Vacation Mode + Feature 5: Withdraw Button + Guidelines */}
+          {/* Feature 5: Withdraw Button + Guidelines */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px', marginBottom: '40px' }}>
-
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-              <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🏖️ Vacation Mode</h3>
-              <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
-                Temporarily hide your profile from new requests
-              </p>
-              <button
-                onClick={() => setVacationMode(!vacationMode)}
-                style={{
-                  padding: '12px 24px',
-                  background: vacationMode ? '#ff4d4f' : '#2e7d32',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  width: '100%'
-                }}
-              >
-                {vacationMode ? 'Turn Off' : 'Turn On'}
-              </button>
-            </div>
 
             {/* Feature 5: Available Balance with Withdraw Button */}
             <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
@@ -871,65 +638,14 @@ export default function SellerDashboard() {
             onBulkAccept={handleBulkAccept}
           />
 
-          {/* Gold/Diamond Exclusive Requests */}
-          <div style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>💎 Gold/Diamond Exclusive Requests</h2>
-              <span style={{ background: '#d4af37', color: 'white', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>HIGH VALUE</span>
-            </div>
-
-            {userTier === 'Standard' ? (
-              <div style={{
-                background: 'linear-gradient(135deg, #fff9e6 0%, #fff 100%)',
-                border: '1px solid #d4af37',
-                borderRadius: '12px',
-                padding: '40px',
-                textAlign: 'center',
-                color: '#856404'
-              }}>
-                <h3 style={{ marginBottom: '10px' }}>🔒 Locked Access</h3>
-                <p style={{ marginBottom: '20px' }}>
-                  There are <strong>{highValueRequests.length} high-value requests</strong> waiting.
-                  <br/>Only Gold and Diamond members can accept these orders.
-                </p>
-                <button
-                  onClick={() => setUserTier('Gold')}
-                  className="btn-primary"
-                  style={{ background: '#d4af37', border: 'none' }}
-                >
-                  Upgrade Membership
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                {highValueRequests.map(req => (
-                  <RequestCard
-                    key={req.id}
-                    request={req}
-                    onAccept={handleAcceptRequest}
-                    isSelected={selectedRequests.includes(req.id)}
-                    onSelect={handleSelectRequest}
-                    showBulkSelect={showBulkSelect}
-                    tier="Gold"
-                  />
-                ))}
-                {highValueRequests.length === 0 && (
-                  <p style={{ color: '#999', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    No exclusive requests match your filters.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Standard Requests */}
-          <div id="standard-requests">
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>Standard Requests</h2>
+          {/* Available Requests */}
+          <div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>📋 Available Requests</h2>
             {loading ? (
               <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Loading requests...</p>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                {standardRequests.map(req => (
+                {filteredAndSortedRequests.map(req => (
                   <RequestCard
                     key={req.id}
                     request={req}
@@ -937,14 +653,13 @@ export default function SellerDashboard() {
                     isSelected={selectedRequests.includes(req.id)}
                     onSelect={handleSelectRequest}
                     showBulkSelect={showBulkSelect}
-                    tier="Standard"
                   />
                 ))}
-                {standardRequests.length === 0 && (
+                {filteredAndSortedRequests.length === 0 && (
                   <p style={{ color: '#999', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    {filteredAndSortedRequests.length === 0 && requests.length > 0
+                    {requests.length > 0
                       ? "No requests match your current filters. Try adjusting your search or filters."
-                      : "No standard requests available."}
+                      : "No requests available at this time. Check back soon!"}
                   </p>
                 )}
               </div>

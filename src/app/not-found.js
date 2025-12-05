@@ -101,7 +101,7 @@ export default function NotFound() {
               </Link>
             </li>
             <li style={{ marginBottom: '10px' }}>
-              <Link href="/offers" style={{ color: '#667eea', textDecoration: 'none', fontWeight: '600' }}>
+              <Link href="/sellers" style={{ color: '#667eea', textDecoration: 'none', fontWeight: '600' }}>
                 ✈️ Find Travelers
               </Link>
             </li>

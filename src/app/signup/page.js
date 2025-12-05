@@ -138,12 +138,6 @@ export default function SignupPage() {
 
         </div>
 
-        {selectedRole === 'seller' && (
-            <div style={{ background: '#fff9c4', padding: '15px', borderRadius: '8px', marginBottom: '30px', fontSize: '0.9rem', color: '#856404', border: '1px solid #fbc02d' }}>
-                <strong>✨ Seller Tip:</strong> You can upgrade to <b>Gold</b> or <b>Diamond</b> membership after signing up to see exclusive high-value requests!
-            </div>
-        )}
-        
         {/* EMAIL/PASSWORD SIGNUP FORM */}
         <form onSubmit={handleEmailSignup} style={{ margin: '0 auto 30px', maxWidth: '400px', textAlign: 'left', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff' }}>
             <h3 style={{ marginBottom: '15px', fontSize: '1.2rem', textAlign: 'center' }}>Sign Up with Email</h3>

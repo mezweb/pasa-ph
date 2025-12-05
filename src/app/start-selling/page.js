@@ -139,7 +139,6 @@ export default function StartSellingPage() {
         },
 
         // Defaults
-        membershipTier: 'Standard',
         isProfileComplete: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -440,7 +439,6 @@ export default function StartSellingPage() {
                 <div style={{ background: '#e3f2fd', borderRadius: '12px', padding: 'clamp(15px, 4vw, 20px)', marginBottom: '30px', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)' }}>
                     <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>ℹ️ What happens next?</div>
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
-                        <li>You'll be added as a Standard (Free) seller</li>
                         <li>Start browsing buyer requests immediately</li>
                         <li>Build your reputation and unlock benefits</li>
                         <li>You can update your profile anytime</li>

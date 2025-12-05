@@ -113,7 +113,7 @@ export default function Home() {
     localStorage.setItem('recentSearches', JSON.stringify(updated));
 
     if (searchMode === 'travelers') {
-      router.push('/offers');
+      router.push('/sellers');
     } else {
       document.getElementById('shop')?.scrollIntoView({behavior: 'smooth'});
     }
@@ -213,31 +213,6 @@ export default function Home() {
             }}
           >
             🛍️ Shop Items
-          </button>
-          <button
-            onClick={() => router.push('/start-selling')}
-            style={{
-              padding: 'clamp(12px, 2vh, 15px) clamp(28px, 5vw, 40px)',
-              fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)',
-              fontWeight: 'bold',
-              borderRadius: '30px',
-              border: '2px solid white',
-              background: 'transparent',
-              color: 'white',
-              cursor: 'pointer',
-              transition: 'transform 0.2s, background 0.2s',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            ✈️ Post a Trip
           </button>
           <button
             onClick={() => setShowVideoModal(true)}
@@ -554,7 +529,7 @@ export default function Home() {
                     ))
                 ) : (
                     ['Japan', 'USA', 'South Korea', 'Singapore', 'This Week'].map(tag => (
-                        <button key={tag} onClick={() => router.push('/offers')} style={{ background: 'white', border: '1px solid #ddd', borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem', color: '#666', cursor: 'pointer', transition: '0.2s' }} onMouseOver={(e) => e.target.style.borderColor = '#000'} onMouseOut={(e) => e.target.style.borderColor = '#ddd'}>{tag}</button>
+                        <button key={tag} onClick={() => router.push('/sellers')} style={{ background: 'white', border: '1px solid #ddd', borderRadius: '20px', padding: '6px 16px', fontSize: '0.85rem', color: '#666', cursor: 'pointer', transition: '0.2s' }} onMouseOver={(e) => e.target.style.borderColor = '#000'} onMouseOut={(e) => e.target.style.borderColor = '#ddd'}>{tag}</button>
                     ))
                 )}
             </div>
@@ -939,7 +914,7 @@ export default function Home() {
                         }}>
                             {/* NEW LISTING TAG */}
                             {isNewListing && (
-                                <div style={{ position: 'absolute', top: '10px', left: '10px', background: '#52c41a', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10 }}>
+                                <div style={{ position: 'absolute', top: '52px', right: '10px', background: '#52c41a', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                                     ✨ New Listing
                                 </div>
                             )}
@@ -1098,7 +1073,7 @@ export default function Home() {
         <div style={{ marginBottom: '60px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: '800', margin: 0 }}>Meet Our Top Sellers</h2>
-                <Link href="/offers" style={{ color: '#0070f3', fontWeight: '600', fontSize: '0.9rem' }}>View All Sellers &rarr;</Link>
+                <Link href="/sellers" style={{ color: '#0070f3', fontWeight: '600', fontSize: '0.9rem' }}>View All Sellers &rarr;</Link>
             </div>
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '20px' }}>
                 {['All', 'Japan', 'USA', 'South Korea', 'Singapore'].map(cat => (
