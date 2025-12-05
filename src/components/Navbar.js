@@ -169,7 +169,7 @@ export default function Navbar() {
                             </div>
                         )}
                     </div>
-                    <Link href="/offers">Sellers</Link>
+                    <Link href="/sellers">Sellers</Link>
                     <Link href="/how-it-works">How it Works</Link>
                     <Link href="/support">Support</Link>
                     {/* CHANGED: Link directly to /start-selling instead of login */}
@@ -204,8 +204,8 @@ export default function Navbar() {
                                     </div>
                                 )}
                             </div>
-                            
-                            <Link href="/offers">Sellers</Link>
+
+                            <Link href="/sellers">Sellers</Link>
                             <Link href="/how-it-works">How it Works</Link>
                             <Link href="/support">Support</Link>
                             

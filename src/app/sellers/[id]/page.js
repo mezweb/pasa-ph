@@ -47,8 +47,8 @@ export default function TripDetailPage() {
     <>
       <Navbar />
       <div className="container" style={{ padding: '40px 20px', maxWidth: '900px' }}>
-        
-        <Link href="/offers" style={{ color: '#666', display: 'inline-flex', alignItems: 'center', gap: '5px', marginBottom: '20px' }}>
+
+        <Link href="/sellers" style={{ color: '#666', display: 'inline-flex', alignItems: 'center', gap: '5px', marginBottom: '20px' }}>
           &larr; Back to Sellers
         </Link>
 
