@@ -25,7 +25,7 @@ export default function ProfilePage() {
   const [facebook, setFacebook] = useState('');
   const [tiktokVideoId, setTiktokVideoId] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
-  const [focusCountry, setFocusCountry] = useState('Japan'); // Load focus country
+  const [focusCountries, setFocusCountries] = useState(['Japan']); // Load focus countries as array
 
   // Item Form State
   const [myItems, setMyItems] = useState([]);
@@ -63,7 +63,14 @@ export default function ProfilePage() {
         setFacebook(data.socials?.facebook || '');
         setTiktokVideoId(data.socials?.tiktokVideoId || '');
         setBannerUrl(data.bannerUrl || '');
-        setFocusCountry(data.focusCountry || 'Japan'); 
+        // Handle both old single focusCountry and new focusCountries array
+        if (data.focusCountries && Array.isArray(data.focusCountries)) {
+          setFocusCountries(data.focusCountries);
+        } else if (data.focusCountry) {
+          setFocusCountries([data.focusCountry]); // Migrate old format
+        } else {
+          setFocusCountries(['Japan']);
+        } 
 
         if (data.isSeller) {
             const itemsRef = collection(db, "users", currentUser.uid, "items");
@@ -76,6 +83,16 @@ export default function ProfilePage() {
     });
     return () => unsubscribe();
   }, [router]);
+
+  const handleToggleCountry = (country) => {
+    if (focusCountries.includes(country)) {
+      // Remove country if already selected
+      setFocusCountries(focusCountries.filter(c => c !== country));
+    } else {
+      // Add country if not selected
+      setFocusCountries([...focusCountries, country]);
+    }
+  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -92,7 +109,7 @@ export default function ProfilePage() {
         deliveryAddress,
         locations,
         bannerUrl,
-        focusCountry, // Save Focus Country
+        focusCountries, // Save Focus Countries as array
         socials: { instagram, facebook, tiktokVideoId },
         isProfileComplete: true,
         updatedAt: serverTimestamp()
@@ -205,21 +222,46 @@ export default function ProfilePage() {
 
                 {isSellerMode && (
                     <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', fontSize: '0.9rem' }}>Primary Country Focus</label>
-                        <select 
-                            style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }}
-                            value={focusCountry} onChange={(e) => setFocusCountry(e.target.value)}
-                        >
-                            <option value="Philippines">Philippines (Local)</option> {/* ADDED */}
-                            <option value="Japan">Japan</option>
-                            <option value="USA">USA</option>
-                            <option value="South Korea">South Korea</option>
-                            <option value="Singapore">Singapore</option>
-                            <option value="Hong Kong">Hong Kong</option>
-                            <option value="Indonesia">Indonesia</option>
-                        </select>
-                        <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '5px' }}>
-                            This determines the default products you see in the Seller Dashboard.
+                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', fontSize: '0.9rem' }}>
+                            Primary Country Focus <span style={{ fontSize: '0.8rem', fontWeight: '400', color: '#666' }}>(Select all that apply)</span>
+                        </label>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                            gap: '12px',
+                            padding: '15px',
+                            background: '#f9f9f9',
+                            borderRadius: '8px',
+                            border: '1px solid #e0e0e0'
+                        }}>
+                            {['Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map(country => (
+                                <label
+                                    key={country}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        cursor: 'pointer',
+                                        padding: '8px',
+                                        borderRadius: '6px',
+                                        background: focusCountries.includes(country) ? '#e3f2fd' : 'white',
+                                        border: `2px solid ${focusCountries.includes(country) ? '#0070f3' : '#ddd'}`,
+                                        transition: 'all 0.2s',
+                                        fontWeight: focusCountries.includes(country) ? '600' : '400'
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={focusCountries.includes(country)}
+                                        onChange={() => handleToggleCountry(country)}
+                                        style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                    />
+                                    <span style={{ fontSize: '0.9rem' }}>{country}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '8px' }}>
+                            Select the countries you travel to most frequently. This helps you see relevant products in the Seller Dashboard.
                         </p>
                     </div>
                 )}

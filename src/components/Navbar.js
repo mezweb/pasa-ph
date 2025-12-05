@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { auth, db } from '../lib/firebase'; 
+import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { useCart } from '../context/CartContext'; 
+import { useCart } from '../context/CartContext';
 // FIX: Added 'signOut' to the imports list
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'; 
-import { useRouter } from 'next/navigation';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
@@ -15,6 +15,24 @@ export default function Navbar() {
   const { cart, pasaBag, viewMode, toggleViewMode } = useCart();
   const isSellerMode = viewMode === 'seller';
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Helper function to determine if a link is active
+  const isActivePage = (path) => {
+    if (path === '/') return pathname === '/';
+    return pathname?.startsWith(path);
+  };
+
+  // Style for active links
+  const getLinkStyle = (path) => ({
+    position: 'relative',
+    color: isActivePage(path) ? '#0070f3' : '#666',
+    fontWeight: isActivePage(path) ? '700' : '500',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    background: isActivePage(path) ? 'rgba(0,112,243,0.08)' : 'transparent',
+    transition: 'all 0.2s ease',
+  });
 
   const [isShopHovered, setIsShopHovered] = useState(false);
   const [isProfileHovered, setIsProfileHovered] = useState(false);
@@ -136,12 +154,12 @@ export default function Navbar() {
             {/* --- LOGGED OUT STATE (NEUTRAL) --- */}
             {!user ? (
                 <>
-                    <div 
+                    <div
                         style={{ position: 'relative' }}
                         onMouseEnter={() => setIsShopHovered(true)}
                         onMouseLeave={() => setIsShopHovered(false)}
                     >
-                        <Link href="/shop" style={{ padding: '10px 0', display: 'block' }}>
+                        <Link href="/shop" style={getLinkStyle('/shop')}>
                             Shop ▾
                         </Link>
                         {isShopHovered && (
@@ -169,11 +187,11 @@ export default function Navbar() {
                             </div>
                         )}
                     </div>
-                    <Link href="/sellers">Sellers</Link>
-                    <Link href="/how-it-works">How it Works</Link>
-                    <Link href="/support">Support</Link>
+                    <Link href="/sellers" style={getLinkStyle('/sellers')}>Sellers</Link>
+                    <Link href="/how-it-works" style={getLinkStyle('/how-it-works')}>How it Works</Link>
+                    <Link href="/support" style={getLinkStyle('/support')}>Support</Link>
                     {/* CHANGED: Link directly to /start-selling instead of login */}
-                    <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                    <Link href="/start-selling" style={{ ...getLinkStyle('/start-selling'), color: isActivePage('/start-selling') ? '#0070f3' : '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                 </>
             ) : (
                 /* --- LOGGED IN STATE (ROLE BASED) --- */
@@ -181,20 +199,20 @@ export default function Navbar() {
                     {isSellerMode ? (
                         // Seller Mode (Already a seller, hide Start Selling)
                         <>
-                            <Link href="/products" style={{ color: '#333', fontWeight: 'bold' }}>Marketplace</Link>
-                            <Link href="/buyers">Buyers</Link>
-                            <Link href="/seller-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
-                            <Link href="/support">Support</Link>
+                            <Link href="/products" style={getLinkStyle('/products')}>Marketplace</Link>
+                            <Link href="/buyers" style={getLinkStyle('/buyers')}>Buyers</Link>
+                            <Link href="/seller-dashboard" style={getLinkStyle('/seller-dashboard')}>Dashboard</Link>
+                            <Link href="/support" style={getLinkStyle('/support')}>Support</Link>
                         </>
                     ) : (
                         // Buyer Mode (Check if they are a seller account or not)
                         <>
-                             <div 
+                             <div
                                 style={{ position: 'relative' }}
                                 onMouseEnter={() => setIsShopHovered(true)}
                                 onMouseLeave={() => setIsShopHovered(false)}
                             >
-                                <Link href="/shop" style={{ padding: '10px 0', display: 'block' }}>
+                                <Link href="/shop" style={getLinkStyle('/shop')}>
                                     Shop ▾
                                 </Link>
                                 {isShopHovered && (
@@ -205,16 +223,16 @@ export default function Navbar() {
                                 )}
                             </div>
 
-                            <Link href="/sellers">Sellers</Link>
-                            <Link href="/how-it-works">How it Works</Link>
-                            <Link href="/support">Support</Link>
-                            
+                            <Link href="/sellers" style={getLinkStyle('/sellers')}>Sellers</Link>
+                            <Link href="/how-it-works" style={getLinkStyle('/how-it-works')}>How it Works</Link>
+                            <Link href="/support" style={getLinkStyle('/support')}>Support</Link>
+
                             {/* NEW BUYER DASHBOARD LINK */}
-                            <Link href="/buyer-dashboard" style={{ color: '#0070f3', fontWeight: 'bold' }}>Dashboard</Link>
-                            
+                            <Link href="/buyer-dashboard" style={getLinkStyle('/buyer-dashboard')}>Dashboard</Link>
+
                             {/* Start Selling link only visible if account exists but IS NOT a seller */}
                             {!isSellerAccount && (
-                                <Link href="/start-selling" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
+                                <Link href="/start-selling" style={{ ...getLinkStyle('/start-selling'), color: isActivePage('/start-selling') ? '#0070f3' : '#2e7d32', fontWeight: 'bold' }}>Start Selling</Link>
                             )}
                         </>
                     )}
