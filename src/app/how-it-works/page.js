@@ -1,13 +1,47 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
-
-export const metadata = {
-  title: 'How it Works | Pasa.ph',
-  description: 'Learn how to request items or earn money as a traveler on Pasa.ph.',
-};
+import { useRouter } from 'next/navigation';
 
 export default function HowItWorksPage() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [isSeller, setIsSeller] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setIsSeller(docSnap.data().isSeller || false);
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleStartEarning = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (isSeller) {
+      router.push('/seller-dashboard');
+    } else {
+      router.push('/start-selling');
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -176,11 +210,23 @@ export default function HowItWorksPage() {
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <Link href="/start-selling">
-              <button className="btn-primary" style={{ padding: '18px 40px', fontSize: '1.1rem', borderRadius: '30px', justifyContent: 'center', background: '#f57c00', boxShadow: '0 4px 15px rgba(245,124,0,0.3)' }}>
-                Start Earning Now →
-              </button>
-            </Link>
+            <button
+              onClick={handleStartEarning}
+              className="btn-primary"
+              style={{
+                padding: '18px 40px',
+                fontSize: '1.1rem',
+                borderRadius: '30px',
+                justifyContent: 'center',
+                background: '#f57c00',
+                boxShadow: '0 4px 15px rgba(245,124,0,0.3)',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              disabled={loading}
+            >
+              Start Earning Now →
+            </button>
           </div>
         </div>
 
@@ -218,27 +264,6 @@ export default function HowItWorksPage() {
           </div>
         </div>
 
-        {/* CTA SECTION */}
-        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: '800', marginBottom: '20px', color: '#333' }}>
-            Ready to Get Started?
-          </h2>
-          <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '30px' }}>
-            Join thousands of shoppers and travelers on Pasa.ph
-          </p>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/signup?role=buyer">
-              <button className="btn-primary" style={{ padding: '18px 40px', fontSize: '1.1rem', borderRadius: '30px', justifyContent: 'center' }}>
-                Sign Up as Shopper
-              </button>
-            </Link>
-            <Link href="/signup?role=seller">
-              <button className="btn-primary" style={{ padding: '18px 40px', fontSize: '1.1rem', borderRadius: '30px', justifyContent: 'center', background: '#f57c00' }}>
-                Sign Up as Traveler
-              </button>
-            </Link>
-          </div>
-        </div>
       </div>
 
       <Footer />
