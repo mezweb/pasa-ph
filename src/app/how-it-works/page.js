@@ -23,12 +23,12 @@ export default function HowItWorksPage() {
             </p>
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="#for-shoppers" style={{ textDecoration: 'none' }}>
-                <button style={{ padding: '15px 30px', background: 'white', color: '#667eea', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', transition: 'transform 0.2s' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                <button style={{ padding: '15px 30px', background: 'white', color: '#667eea', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
                   🛍️ I Want to Shop
                 </button>
               </Link>
               <Link href="#for-travelers" style={{ textDecoration: 'none' }}>
-                <button style={{ padding: '15px 30px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid white', borderRadius: '30px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', backdropFilter: 'blur(10px)', transition: 'all 0.2s' }} onMouseOver={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#667eea'; }} onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white'; }}>
+                <button style={{ padding: '15px 30px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '2px solid white', borderRadius: '30px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
                   ✈️ I Want to Earn
                 </button>
               </Link>
