@@ -37,18 +37,20 @@ export default function EmptyState({
   const emptyStates = {
     'no-buyers': {
       icon: '🌏',
-      title: region ? `Be the first seller in ${region}!` : 'Be the first seller in this region!',
-      description: 'No buyers requesting items from this location yet. You could be the pioneer!',
+      title: region ? `Quiet day in ${region}` : 'Quiet day here',
+      description: region
+        ? `No shoppers requesting items from ${region} right now. Be the first to help them out!`
+        : 'No new requests yet. Check back soon for opportunities!',
       actionLabel: region && onWaitlist ? `Get notified when buyers appear in ${region}` : null,
       showWaitlist: true
     },
     'no-sellers': {
       icon: '✈️',
-      title: region ? `No sellers traveling to ${region} yet` : 'No sellers available',
+      title: region ? `No travelers heading to ${region} yet` : 'No travelers yet',
       description: region && suggestions.length > 0
         ? `Have you checked ${suggestions[0]}?`
         : 'Check back soon - new travelers join daily!',
-      actionLabel: onWaitlist ? 'Notify me when a seller appears' : null,
+      actionLabel: onWaitlist ? 'Notify me when a traveler appears' : null,
       showWaitlist: true
     },
     'no-results': {
@@ -62,43 +64,43 @@ export default function EmptyState({
     },
     'no-orders': {
       icon: '📦',
-      title: 'No orders yet',
-      description: 'When buyers purchase from you, their orders will appear here.',
+      title: 'Your orders will appear here',
+      description: 'Once shoppers purchase items, you\'ll see all the details right here.',
       actionLabel: null,
       showWaitlist: false
     },
     'no-requests': {
       icon: '🛍️',
-      title: 'No requests available',
-      description: 'Check back soon for new buyer requests in your travel destinations!',
+      title: 'Take a break - no new requests',
+      description: 'Check back soon for new shopper requests in your travel destinations!',
       actionLabel: 'Browse Marketplace',
       showWaitlist: false
     },
     'no-products': {
       icon: '🏪',
-      title: 'Shop is empty',
-      description: 'This seller hasn\'t listed any products yet.',
+      title: 'This shop is taking a break',
+      description: 'This traveler hasn\'t listed any items yet. Check back soon!',
       actionLabel: null,
       showWaitlist: false
     },
     'no-wishlist': {
       icon: '💝',
-      title: 'Your wishlist is empty',
-      description: 'Save items you love to find them easily later!',
+      title: 'Start adding items you love',
+      description: 'Save your favorite finds here to easily request them later!',
       actionLabel: 'Browse Products',
       showWaitlist: false
     },
     'no-cart': {
       icon: '🛒',
-      title: 'Your cart is empty',
-      description: 'Add some items to get started!',
+      title: 'Your cart is waiting for something special',
+      description: 'Find items from travelers and add them here to get started!',
       actionLabel: 'Start Shopping',
       showWaitlist: false
     },
     'generic': {
       icon: '📭',
-      title: 'Nothing here yet',
-      description: 'Check back later for updates!',
+      title: 'Quiet day here',
+      description: 'Check back soon - exciting things are coming!',
       actionLabel: null,
       showWaitlist: false
     }
