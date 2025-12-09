@@ -64,6 +64,20 @@ export default function SellerDashboard() {
   const [tripSuccessType, setTripSuccessType] = useState('register'); // 'register' or 'update'
   const [dateError, setDateError] = useState('');
 
+  // Profile Completion Modal state
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileStep, setProfileStep] = useState(1); // 1-4 steps
+  const [profileFormData, setProfileFormData] = useState({
+    bio: '',
+    city: '',
+    phoneNumber: '',
+    travelCountries: [],
+    languages: [],
+    responseRate: 95,
+    deliveryAddress: ''
+  });
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+
   // Quick reply templates (now editable)
   const [quickReplies, setQuickReplies] = useState([
     "I'll be arriving on [date]. I can deliver to your location.",
@@ -164,13 +178,55 @@ export default function SellerDashboard() {
     };
   }, [router]);
 
-  // Calculate profile completion (Feature 12)
+  // Calculate profile completion (Feature 12) - Enhanced
   const calculateProfileCompletion = () => {
     if (!userData) return 0;
-    const fields = ['displayName', 'email', 'photoURL', 'bio', 'city', 'deliveryAddress'];
-    const completedFields = fields.filter(field => userData[field] && userData[field].length > 0);
-    return Math.round((completedFields.length / fields.length) * 100);
+    const requiredFields = [
+      { key: 'displayName', weight: 15 },
+      { key: 'email', weight: 10 },
+      { key: 'photoURL', weight: 15 },
+      { key: 'bio', weight: 20 },
+      { key: 'city', weight: 10 },
+      { key: 'phoneNumber', weight: 15 },
+      { key: 'travelCountries', weight: 10, isArray: true },
+      { key: 'deliveryAddress', weight: 5 }
+    ];
+
+    let totalScore = 0;
+    requiredFields.forEach(field => {
+      if (field.isArray) {
+        if (userData[field.key] && userData[field.key].length > 0) {
+          totalScore += field.weight;
+        }
+      } else {
+        if (userData[field.key] && userData[field.key].toString().trim().length > 0) {
+          totalScore += field.weight;
+        }
+      }
+    });
+
+    return totalScore;
   };
+
+  // Check if profile is complete enough to be visible
+  const isProfileReadyForVisibility = () => {
+    return calculateProfileCompletion() === 100;
+  };
+
+  // Handle opening profile modal with pre-filled data
+  useEffect(() => {
+    if (userData && showProfileModal) {
+      setProfileFormData({
+        bio: userData.bio || '',
+        city: userData.city || '',
+        phoneNumber: userData.phoneNumber || '',
+        travelCountries: userData.travelCountries || [],
+        languages: userData.languages || [],
+        responseRate: userData.responseRate || 95,
+        deliveryAddress: userData.deliveryAddress || ''
+      });
+    }
+  }, [userData, showProfileModal]);
 
   // Calculate trip countdown (Feature 9)
   const getTripCountdown = () => {
@@ -483,6 +539,71 @@ export default function SellerDashboard() {
     }
   };
 
+  // Handle Profile Completion Submission
+  const handleCompleteProfile = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert('Please log in to complete your profile');
+      return;
+    }
+
+    setIsSubmittingProfile(true);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+
+      // Update user profile with new data
+      await updateDoc(userRef, {
+        bio: profileFormData.bio,
+        city: profileFormData.city,
+        phoneNumber: profileFormData.phoneNumber,
+        travelCountries: profileFormData.travelCountries,
+        languages: profileFormData.languages,
+        responseRate: profileFormData.responseRate,
+        deliveryAddress: profileFormData.deliveryAddress,
+        isProfileComplete: true,
+        isVisible: true, // Make visible once profile is complete
+        profileCompletedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Show success message
+      alert('🎉 Profile completed! You are now visible to buyers on the Sellers page.');
+      setShowProfileModal(false);
+      setProfileStep(1);
+
+      // Refresh user data
+      const updatedDoc = await getDoc(userRef);
+      if (updatedDoc.exists()) {
+        setUserData(updatedDoc.data());
+      }
+    } catch (error) {
+      console.error('Error completing profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  };
+
+  // Handle country toggle
+  const toggleCountry = (country) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      travelCountries: prev.travelCountries.includes(country)
+        ? prev.travelCountries.filter(c => c !== country)
+        : [...prev.travelCountries, country]
+    }));
+  };
+
+  // Handle language toggle
+  const toggleLanguage = (language) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      languages: prev.languages.includes(language)
+        ? prev.languages.filter(l => l !== language)
+        : [...prev.languages, language]
+    }));
+  };
+
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
   const profileCompletion = calculateProfileCompletion();
   const tripCountdown = getTripCountdown();
@@ -734,8 +855,9 @@ export default function SellerDashboard() {
               }} />
             </div>
             {profileCompletion < 100 && (
-              <Link href="/profile">
-                <button style={{
+              <button
+                onClick={() => setShowProfileModal(true)}
+                style={{
                   marginTop: '12px',
                   padding: '8px 16px',
                   background: '#0070f3',
@@ -746,11 +868,100 @@ export default function SellerDashboard() {
                   fontSize: '0.85rem',
                   fontWeight: '600'
                 }}>
-                  Complete Profile
-                </button>
-              </Link>
+                Complete Profile
+              </button>
             )}
           </div>
+
+          {/* Seller Visibility Control */}
+          {profileCompletion === 100 && (
+            <div style={{
+              background: cardBg,
+              padding: '20px 25px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: `1px solid ${borderColor}`,
+              color: textColor
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div>
+                  <div style={{ fontWeight: '600', marginBottom: '5px' }}>Seller Visibility</div>
+                  <div style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666' }}>
+                    {userData?.isVisible
+                      ? 'You are visible to buyers on the Sellers page'
+                      : 'You are hidden from buyers'}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    try {
+                      const userRef = doc(db, 'users', user.uid);
+                      const newVisibility = !userData?.isVisible;
+                      await updateDoc(userRef, {
+                        isVisible: newVisibility,
+                        updatedAt: serverTimestamp()
+                      });
+                      const updatedDoc = await getDoc(userRef);
+                      if (updatedDoc.exists()) {
+                        setUserData(updatedDoc.data());
+                      }
+                      alert(newVisibility
+                        ? '✅ You are now visible to buyers!'
+                        : '🔒 You are now hidden from buyers.');
+                    } catch (error) {
+                      console.error('Error updating visibility:', error);
+                      alert('Failed to update visibility. Please try again.');
+                    }
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: userData?.isVisible ? '#f44336' : '#2e7d32',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  {userData?.isVisible ? (
+                    <>
+                      <span>👁️</span>
+                      <span>Hide from Buyers</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      <span>Show to Buyers</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              {userData?.isVisible && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px',
+                  background: darkMode ? '#1a3a1a' : '#e8f5e9',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  color: darkMode ? '#90ee90' : '#2e7d32'
+                }}>
+                  💡 Tip: Buyers can find you at <a href={`/sellers`} style={{ color: '#0070f3', textDecoration: 'underline' }}>/sellers</a>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Feature 14: Recent Activity Ticker */}
           <div style={{
@@ -1465,6 +1676,419 @@ export default function SellerDashboard() {
             {isSubmittingTrip ? (isEditingTrip ? 'Updating...' : 'Registering...') : (isEditingTrip ? 'Update Trip' : 'Register Trip')}
           </button>
         </form>
+      </Modal>
+
+      {/* Profile Completion Modal */}
+      <Modal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          setProfileStep(1);
+        }}
+        title="✨ Complete Your Seller Profile"
+      >
+        <div style={{ marginBottom: '25px' }}>
+          {/* Progress Steps */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
+            {[1, 2, 3, 4].map((step) => (
+              <div key={step} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: profileStep >= step ? '#0070f3' : '#e0e0e0',
+                  color: profileStep >= step ? 'white' : '#999',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  transition: 'all 0.3s'
+                }}>
+                  {step}
+                </div>
+                {step < 4 && (
+                  <div style={{
+                    flex: 1,
+                    height: '3px',
+                    background: profileStep > step ? '#0070f3' : '#e0e0e0',
+                    marginLeft: '8px',
+                    transition: 'all 0.3s'
+                  }} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleCompleteProfile}>
+            {/* Step 1: Basic Info */}
+            {profileStep === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: '1.3rem', color: '#333' }}>Tell buyers about yourself</h3>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Bio / About Me *
+                  </label>
+                  <textarea
+                    required
+                    value={profileFormData.bio}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, bio: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      minHeight: '120px',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                    placeholder="Tell buyers about your travel experience, what makes you a reliable shopper..."
+                  />
+                  <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+                    💡 Share your experience as a traveler and why buyers can trust you
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    City / Location *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileFormData.city}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, city: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                    placeholder="e.g. Makati, Metro Manila"
+                  />
+                  <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+                    📍 Where are you based? This helps buyers know your delivery area
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setProfileStep(2)}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    background: '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '1.05rem'
+                  }}
+                >
+                  Next: Travel Preferences →
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Travel Preferences */}
+            {profileStep === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: '1.3rem', color: '#333' }}>Where do you travel?</h3>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Countries You Visit *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    {['Japan', 'USA', 'South Korea', 'Singapore', 'Hong Kong', 'Vietnam'].map((country) => (
+                      <div
+                        key={country}
+                        onClick={() => toggleCountry(country)}
+                        style={{
+                          padding: '12px',
+                          border: `2px solid ${profileFormData.travelCountries.includes(country) ? '#0070f3' : '#ddd'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: profileFormData.travelCountries.includes(country) ? '#e3f2fd' : 'white',
+                          fontWeight: profileFormData.travelCountries.includes(country) ? '600' : '400',
+                          transition: 'all 0.2s',
+                          textAlign: 'center',
+                          fontSize: '0.95rem'
+                        }}
+                      >
+                        {profileFormData.travelCountries.includes(country) && '✓ '}
+                        {country === 'Japan' && '🇯🇵 '}
+                        {country === 'USA' && '🇺🇸 '}
+                        {country === 'South Korea' && '🇰🇷 '}
+                        {country === 'Singapore' && '🇸🇬 '}
+                        {country === 'Hong Kong' && '🇭🇰 '}
+                        {country === 'Vietnam' && '🇻🇳 '}
+                        {country}
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px', marginBottom: '0' }}>
+                    ✈️ Select all countries you travel to or plan to visit
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileStep(1)}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: '#e0e0e0',
+                      color: '#333',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem'
+                    }}
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProfileStep(3)}
+                    disabled={profileFormData.travelCountries.length === 0}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: profileFormData.travelCountries.length > 0 ? '#0070f3' : '#ccc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: profileFormData.travelCountries.length > 0 ? 'pointer' : 'not-allowed',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem',
+                      opacity: profileFormData.travelCountries.length > 0 ? 1 : 0.6
+                    }}
+                  >
+                    Next: Contact Info →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Contact Details */}
+            {profileStep === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: '1.3rem', color: '#333' }}>How can buyers reach you?</h3>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={profileFormData.phoneNumber}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, phoneNumber: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                    placeholder="e.g. +63 917 123 4567"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Delivery Address *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileFormData.deliveryAddress}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, deliveryAddress: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                    placeholder="e.g. Makati City, Metro Manila"
+                  />
+                  <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+                    📦 Your preferred meetup or delivery area
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '0.95rem' }}>
+                    Languages You Speak (Optional)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {['English', 'Filipino', 'Japanese', 'Korean', 'Mandarin', 'Cantonese', 'Vietnamese', 'Spanish'].map((language) => (
+                      <div
+                        key={language}
+                        onClick={() => toggleLanguage(language)}
+                        style={{
+                          padding: '10px',
+                          border: `2px solid ${profileFormData.languages.includes(language) ? '#0070f3' : '#ddd'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: profileFormData.languages.includes(language) ? '#e3f2fd' : 'white',
+                          fontWeight: profileFormData.languages.includes(language) ? '600' : '400',
+                          transition: 'all 0.2s',
+                          textAlign: 'center',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        {profileFormData.languages.includes(language) && '✓ '}
+                        {language}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileStep(2)}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: '#e0e0e0',
+                      color: '#333',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem'
+                    }}
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProfileStep(4)}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: '#0070f3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem'
+                    }}
+                  >
+                    Next: Review →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Review and Submit */}
+            {profileStep === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: '1.3rem', color: '#333' }}>Review Your Profile</h3>
+
+                <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '12px', fontSize: '0.95rem' }}>
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>BIO:</strong>
+                    <p style={{ margin: '5px 0 0', lineHeight: '1.5' }}>{profileFormData.bio || '—'}</p>
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>LOCATION:</strong>
+                    <p style={{ margin: '5px 0 0' }}>{profileFormData.city || '—'}</p>
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>TRAVEL COUNTRIES:</strong>
+                    <p style={{ margin: '5px 0 0' }}>
+                      {profileFormData.travelCountries.length > 0
+                        ? profileFormData.travelCountries.join(', ')
+                        : '—'}
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>PHONE:</strong>
+                    <p style={{ margin: '5px 0 0' }}>{profileFormData.phoneNumber || '—'}</p>
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>DELIVERY ADDRESS:</strong>
+                    <p style={{ margin: '5px 0 0' }}>{profileFormData.deliveryAddress || '—'}</p>
+                  </div>
+
+                  <div>
+                    <strong style={{ color: '#666', fontSize: '0.85rem' }}>LANGUAGES:</strong>
+                    <p style={{ margin: '5px 0 0' }}>
+                      {profileFormData.languages.length > 0
+                        ? profileFormData.languages.join(', ')
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#e3f2fd',
+                  padding: '15px',
+                  borderRadius: '8px',
+                  border: '1px solid #90caf9',
+                  fontSize: '0.9rem',
+                  color: '#1565c0'
+                }}>
+                  <strong>✨ Great news!</strong> Once you complete your profile, you'll be visible to all buyers on the Sellers page.
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileStep(3)}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: '#e0e0e0',
+                      color: '#333',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem'
+                    }}
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingProfile}
+                    style={{
+                      flex: 2,
+                      padding: '14px',
+                      background: isSubmittingProfile ? '#ccc' : 'linear-gradient(135deg, #0070f3 0%, #00c3ff 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: isSubmittingProfile ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '1.05rem',
+                      opacity: isSubmittingProfile ? 0.6 : 1
+                    }}
+                  >
+                    {isSubmittingProfile ? 'Completing Profile...' : '🎉 Complete Profile & Go Live!'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
       </Modal>
 
       {/* Success Animation Overlay */}
