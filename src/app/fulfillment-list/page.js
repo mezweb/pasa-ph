@@ -18,6 +18,7 @@ export default function FulfillmentList() {
   const [loading, setLoading] = useState(true);
   const [groupByBuyer, setGroupByBuyer] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showMapView, setShowMapView] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -210,6 +211,148 @@ export default function FulfillmentList() {
     alert('Shopping list downloaded! You can print it from your files.');
   };
 
+  const handlePrintShoppingList = () => {
+    const toBuyItems = acceptedRequests.filter(item => item.status === 'to-buy');
+
+    if (toBuyItems.length === 0) {
+      alert('No items to buy yet!');
+      return;
+    }
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    let content = `
+      <html>
+        <head>
+          <title>PASA.PH Shopping List</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #2e7d32; }
+            .buyer-section { margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .item { margin: 15px 0; padding: 10px; background: #f9f9f9; }
+            .checkbox { margin-right: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>🛒 PASA.PH Shopping List</h1>
+          <p>Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+          <p>Traveler: ${user?.displayName || 'N/A'}</p>
+          <hr/>
+    `;
+
+    const grouped = {};
+    toBuyItems.forEach(item => {
+      const buyer = item.buyerName || 'Unknown';
+      if (!grouped[buyer]) grouped[buyer] = [];
+      grouped[buyer].push(item);
+    });
+
+    Object.entries(grouped).forEach(([buyer, items]) => {
+      content += `<div class="buyer-section">`;
+      content += `<h2>👤 ${buyer}</h2>`;
+      items.forEach(item => {
+        content += `<div class="item">`;
+        content += `<input type="checkbox" class="checkbox"/> <strong>${item.title}</strong><br/>`;
+        if (item.color) content += `&nbsp;&nbsp;&nbsp;Color: ${item.color}<br/>`;
+        if (item.capacity) content += `&nbsp;&nbsp;&nbsp;Capacity: ${item.capacity}<br/>`;
+        if (item.quantity > 1) content += `&nbsp;&nbsp;&nbsp;Quantity: ${item.quantity}<br/>`;
+        content += `&nbsp;&nbsp;&nbsp;Max Price: ₱${(item.targetPrice || item.price || 0).toLocaleString()}<br/>`;
+        content += `&nbsp;&nbsp;&nbsp;Delivery: ${item.deliveryMethod === 'shipping' ? '📦 Shipping' : '🤝 Meetup'} - ${item.deliveryLocation}<br/>`;
+        content += `</div>`;
+      });
+      content += `</div>`;
+    });
+
+    content += `<hr/><p><strong>TOTAL ITEMS: ${toBuyItems.length}</strong></p>`;
+    content += `<p><strong>ESTIMATED PAYOUT: ₱${totals.totalPayout.toLocaleString()}</strong></p>`;
+    content += `</body></html>`;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const handleExportToNotes = (format) => {
+    const toBuyItems = acceptedRequests.filter(item => item.status === 'to-buy');
+
+    if (toBuyItems.length === 0) {
+      alert('No items to buy yet!');
+      return;
+    }
+
+    let content = `PASA.PH SHOPPING LIST\n`;
+    content += `${new Date().toLocaleDateString()}\n\n`;
+
+    const grouped = {};
+    toBuyItems.forEach(item => {
+      const buyer = item.buyerName || 'Unknown';
+      if (!grouped[buyer]) grouped[buyer] = [];
+      grouped[buyer].push(item);
+    });
+
+    Object.entries(grouped).forEach(([buyer, items]) => {
+      content += `👤 ${buyer}\n`;
+      items.forEach((item, idx) => {
+        content += `☐ ${item.title}\n`;
+        if (item.color) content += `   Color: ${item.color}\n`;
+        if (item.capacity) content += `   Capacity: ${item.capacity}\n`;
+        content += `   ₱${(item.targetPrice || item.price || 0).toLocaleString()}\n`;
+      });
+      content += `\n`;
+    });
+
+    content += `Total Items: ${toBuyItems.length}\n`;
+    content += `Total Payout: ₱${totals.totalPayout.toLocaleString()}`;
+
+    if (format === 'apple') {
+      // Copy to clipboard for pasting into Notes
+      navigator.clipboard.writeText(content).then(() => {
+        alert('✅ Copied to clipboard! Paste into Apple Notes.');
+      }).catch(() => {
+        alert('Unable to copy. Please try the download option instead.');
+      });
+    } else if (format === 'google') {
+      // For Google Keep, we'll create a shareable text
+      const keepUrl = `https://keep.google.com/u/0/#create?text=${encodeURIComponent(content)}`;
+      window.open(keepUrl, '_blank');
+    }
+  };
+
+  const handleAcceptAllFromBuyer = async (buyerItems) => {
+    const toBuyItems = buyerItems.filter(item => item.status === 'to-buy');
+
+    if (toBuyItems.length === 0) {
+      alert('All items from this buyer are already purchased or delivered!');
+      return;
+    }
+
+    const confirmed = confirm(`Mark all ${toBuyItems.length} items from ${buyerItems[0].buyerName?.split(' ')[0] || 'this buyer'} as purchased?`);
+
+    if (!confirmed) return;
+
+    try {
+      // Update all items to purchased status
+      const updatePromises = toBuyItems.map(item =>
+        updateDoc(doc(db, "requests", item.id), {
+          itemStatus: 'purchased',
+          isBought: true,
+          boughtAt: new Date(),
+          updatedAt: new Date()
+        })
+      );
+
+      await Promise.all(updatePromises);
+      alert(`✅ Marked ${toBuyItems.length} items as purchased!`);
+    } catch (error) {
+      console.error("Error updating items:", error);
+      alert("Failed to update some items. Please try again.");
+    }
+  };
+
+  const getFirstName = (fullName) => {
+    if (!fullName) return 'Unknown';
+    return fullName.split(' ')[0];
+  };
+
   return (
     <>
       <Navbar />
@@ -229,37 +372,122 @@ export default function FulfillmentList() {
               <Link href="/seller-dashboard" style={{ textDecoration: 'none', color: '#0070f3', fontSize: '0.9rem', marginBottom: '8px', display: 'block' }}>
                 ← Back to Dashboard
               </Link>
-              <h1 style={{ margin: '0 0 8px', fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
-                📋 Fulfillment List
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
+                  📋 Fulfillment List
+                </h1>
+                <div style={{
+                  background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+                  color: 'white',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(46, 125, 50, 0.3)'
+                }}>
+                  <span>🔒</span>
+                  <span>Protected by Escrow</span>
+                </div>
+              </div>
               <p style={{ margin: 0, color: '#666' }}>
                 Manage your accepted requests and track deliveries
               </p>
             </div>
 
-            {/* Export button */}
-            <button
-              onClick={handleExportShoppingList}
-              style={{
-                padding: '12px 24px',
-                background: '#2e7d32',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'transform 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              <span>📄</span>
-              <span>Export Shopping List</span>
-            </button>
+            {/* Export buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setShowMapView(true)}
+                style={{
+                  padding: '12px 20px',
+                  background: '#1976d2',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span>🗺️</span>
+                <span>Map View</span>
+              </button>
+              <button
+                onClick={handlePrintShoppingList}
+                style={{
+                  padding: '12px 20px',
+                  background: '#2e7d32',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span>🖨️</span>
+                <span>Print List</span>
+              </button>
+              <button
+                onClick={() => handleExportToNotes('apple')}
+                style={{
+                  padding: '12px 20px',
+                  background: '#000000',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span>🍎</span>
+                <span>Apple Notes</span>
+              </button>
+              <button
+                onClick={() => handleExportToNotes('google')}
+                style={{
+                  padding: '12px 20px',
+                  background: '#fbbc04',
+                  color: '#202124',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span>📝</span>
+                <span>Google Keep</span>
+              </button>
+            </div>
           </div>
 
           {/* Summary cards */}
@@ -315,16 +543,61 @@ export default function FulfillmentList() {
               background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
               padding: '20px',
               borderRadius: '12px',
-              color: 'white'
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.4)'
             }}>
-              <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '8px' }}>
-                💰 Pending Payout
+              <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '4px' }}>
+                Subtotal
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '12px', opacity: 0.9 }}>
+                ₱{acceptedRequests.reduce((sum, item) => sum + (item.targetPrice || item.price || 0), 0).toLocaleString()}
+              </div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 'bold', opacity: 0.95, marginBottom: '6px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '8px' }}>
+                💰 TOTAL EARNINGS
+              </div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', letterSpacing: '-0.5px' }}>
                 ₱{totals.totalPayout.toLocaleString()}
               </div>
             </div>
           </div>
+
+          {/* De Minimis Tax Warning */}
+          {totals.totalPayout > 10000 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+              color: 'white',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'start',
+              gap: '12px',
+              boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+            }}>
+              <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                  De Minimis Tax Alert
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.95 }}>
+                  Your total payout (₱{totals.totalPayout.toLocaleString()}) exceeds the ₱10,000 De Minimis threshold.
+                  You may need to declare these items at customs and pay applicable duties/taxes.
+                </div>
+                <Link
+                  href="/customs-info"
+                  style={{
+                    color: 'white',
+                    textDecoration: 'underline',
+                    fontSize: '0.85rem',
+                    marginTop: '8px',
+                    display: 'inline-block'
+                  }}
+                >
+                  Learn more about customs regulations →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Customs tracker */}
           <CustomsTracker items={acceptedRequests} />
@@ -441,34 +714,62 @@ export default function FulfillmentList() {
                     }}>
                       <div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '4px' }}>
-                          👤 {buyerName}
+                          👤 {getFirstName(buyerName)}
                         </div>
                         <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                          {items.length} {items.length === 1 ? 'item' : 'items'}
+                          {items.length} {items.length === 1 ? 'item' : 'items'} •
+                          {items.filter(i => i.status === 'to-buy').length > 0 &&
+                            ` ${items.filter(i => i.status === 'to-buy').length} to buy`}
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          const firstItem = items[0];
-                          handleMessageBuyer(firstItem.buyerId, buyerName);
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          background: 'white',
-                          color: '#667eea',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span>💬</span>
-                        <span>Message {buyerName.split(' ')[0]}</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {items.filter(i => i.status === 'to-buy').length > 0 && (
+                          <button
+                            onClick={() => handleAcceptAllFromBuyer(items)}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#2e7d32',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: 'bold',
+                              fontSize: '0.9rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'transform 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            <span>✓✓</span>
+                            <span>Mark All Purchased</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            const firstItem = items[0];
+                            handleMessageBuyer(firstItem.buyerId, buyerName);
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'white',
+                            color: '#667eea',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>💬</span>
+                          <span>Message {getFirstName(buyerName)}</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -492,6 +793,177 @@ export default function FulfillmentList() {
           )}
 
         </div>
+
+        {/* Map View Modal */}
+        {showMapView && (
+          <div
+            onClick={() => setShowMapView(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '20px'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'white',
+                borderRadius: '16px',
+                padding: '24px',
+                maxWidth: '600px',
+                width: '100%',
+                maxHeight: '80vh',
+                overflow: 'auto'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>🗺️ Item Locations</h2>
+                <button
+                  onClick={() => setShowMapView(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    padding: '4px'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Group items by location */}
+              {(() => {
+                const toBuyItems = acceptedRequests.filter(item => item.status === 'to-buy');
+                const locationGroups = {};
+
+                toBuyItems.forEach(item => {
+                  const location = item.deliveryLocation || 'Unknown Location';
+                  if (!locationGroups[location]) {
+                    locationGroups[location] = [];
+                  }
+                  locationGroups[location].push(item);
+                });
+
+                // Create a Google Maps search query with all locations
+                const locations = Object.keys(locationGroups).filter(loc => loc !== 'Unknown Location');
+                const mapsQuery = locations.join(' OR ');
+                const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(mapsQuery)}`;
+
+                return (
+                  <>
+                    {locations.length > 0 && (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          padding: '12px 20px',
+                          background: '#1976d2',
+                          color: 'white',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontWeight: 'bold',
+                          marginBottom: '20px',
+                          fontSize: '0.95rem'
+                        }}
+                      >
+                        📍 Open in Google Maps
+                      </a>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {Object.entries(locationGroups).map(([location, items]) => (
+                        <div
+                          key={location}
+                          style={{
+                            background: '#f8f9fa',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: '1px solid #eaeaea'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#333', marginBottom: '4px' }}>
+                                📍 {location}
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                {items.length} {items.length === 1 ? 'item' : 'items'}
+                              </div>
+                            </div>
+                            {location !== 'Unknown Location' && (
+                              <a
+                                href={`https://www.google.com/maps/search/${encodeURIComponent(location)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  padding: '6px 12px',
+                                  background: 'white',
+                                  border: '1px solid #1976d2',
+                                  color: '#1976d2',
+                                  borderRadius: '6px',
+                                  textDecoration: 'none',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                Navigate
+                              </a>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {items.map(item => (
+                              <div
+                                key={item.id}
+                                style={{
+                                  background: 'white',
+                                  padding: '10px',
+                                  borderRadius: '8px',
+                                  fontSize: '0.85rem',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: '600', marginBottom: '2px' }}>{item.title}</div>
+                                  <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                                    for {item.buyerName?.split(' ')[0] || 'Unknown'}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#2e7d32' }}>
+                                  ₱{(item.targetPrice || item.price || 0).toLocaleString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {toBuyItems.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📦</div>
+                        <p>No items to buy yet!</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </>
