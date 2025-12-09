@@ -48,13 +48,21 @@ export default function SellerDashboard() {
   // Register Trip modal state
   const [isRegisterTripOpen, setIsRegisterTripOpen] = useState(false);
   const [isSubmittingTrip, setIsSubmittingTrip] = useState(false);
+  const [isEditingTrip, setIsEditingTrip] = useState(false);
+  const [editingTripId, setEditingTripId] = useState(null);
   const [tripForm, setTripForm] = useState({
     destination: 'Japan',
     departureDate: '',
     returnDate: '',
     maxWeight: '23',
-    notes: ''
+    notes: '',
+    cities: '',
+    flightTicket: null,
+    frequentTraveler: false
   });
+  const [showTripSuccess, setShowTripSuccess] = useState(false);
+  const [tripSuccessType, setTripSuccessType] = useState('register'); // 'register' or 'update'
+  const [dateError, setDateError] = useState('');
 
   // Quick reply templates (now editable)
   const [quickReplies, setQuickReplies] = useState([
@@ -187,6 +195,28 @@ export default function SellerDashboard() {
   };
 
   const travelerLevel = calculateTravelerLevel();
+
+  // Get today's date in YYYY-MM-DD format for date picker min
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Validate trip dates
+  const validateTripDates = (departure, returnDate) => {
+    if (!departure || !returnDate) return true;
+    const depDate = new Date(departure);
+    const retDate = new Date(returnDate);
+    if (retDate < depDate) {
+      setDateError('Return date cannot be before departure date');
+      return false;
+    }
+    setDateError('');
+    return true;
+  };
 
   // Convert price based on currency
   const convertCurrency = (phpPrice) => {
@@ -361,6 +391,25 @@ export default function SellerDashboard() {
     });
   };
 
+  // Handle editing existing trip
+  const handleEditTrip = () => {
+    if (!registeredTrip) return;
+
+    setIsEditingTrip(true);
+    setEditingTripId(registeredTrip.id);
+    setTripForm({
+      destination: registeredTrip.destination || 'Japan',
+      departureDate: registeredTrip.departureDate || '',
+      returnDate: registeredTrip.returnDate || '',
+      maxWeight: String(registeredTrip.maxWeight || '23'),
+      notes: registeredTrip.notes || '',
+      cities: registeredTrip.cities || '',
+      flightTicket: null, // Can't pre-populate file input
+      frequentTraveler: registeredTrip.frequentTraveler || false
+    });
+    setIsRegisterTripOpen(true);
+  };
+
   const handleRegisterTrip = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -368,9 +417,14 @@ export default function SellerDashboard() {
       return;
     }
 
+    // Validate dates
+    if (!validateTripDates(tripForm.departureDate, tripForm.returnDate)) {
+      return;
+    }
+
     setIsSubmittingTrip(true);
     try {
-      await addDoc(collection(db, 'trips'), {
+      const tripData = {
         userId: user.uid,
         userName: user.displayName || 'Anonymous',
         userEmail: user.email,
@@ -379,22 +433,51 @@ export default function SellerDashboard() {
         returnDate: tripForm.returnDate,
         maxWeight: Number(tripForm.maxWeight),
         notes: tripForm.notes,
-        status: 'active',
-        createdAt: serverTimestamp()
-      });
+        cities: tripForm.cities,
+        frequentTraveler: tripForm.frequentTraveler,
+        hasFlightTicket: tripForm.flightTicket !== null,
+        verified: tripForm.flightTicket !== null, // Verified if flight ticket uploaded
+        status: 'active'
+      };
 
-      alert('Trip registered successfully!');
-      setIsRegisterTripOpen(false);
-      setTripForm({
-        destination: 'Japan',
-        departureDate: '',
-        returnDate: '',
-        maxWeight: '23',
-        notes: ''
-      });
+      if (isEditingTrip && editingTripId) {
+        // Update existing trip
+        const tripRef = doc(db, 'trips', editingTripId);
+        await updateDoc(tripRef, {
+          ...tripData,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Create new trip
+        await addDoc(collection(db, 'trips'), {
+          ...tripData,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      // Show success animation
+      setTripSuccessType(isEditingTrip ? 'update' : 'register');
+      setShowTripSuccess(true);
+      setTimeout(() => {
+        setShowTripSuccess(false);
+        setIsRegisterTripOpen(false);
+        setIsEditingTrip(false);
+        setEditingTripId(null);
+        setTripForm({
+          destination: 'Japan',
+          departureDate: '',
+          returnDate: '',
+          maxWeight: '23',
+          notes: '',
+          cities: '',
+          flightTicket: null,
+          frequentTraveler: false
+        });
+        setDateError('');
+      }, 3000);
     } catch (error) {
-      console.error('Error registering trip:', error);
-      alert('Failed to register trip. Please try again.');
+      console.error('Error saving trip:', error);
+      alert('Failed to save trip. Please try again.');
     } finally {
       setIsSubmittingTrip(false);
     }
@@ -403,6 +486,18 @@ export default function SellerDashboard() {
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
   const profileCompletion = calculateProfileCompletion();
   const tripCountdown = getTripCountdown();
+
+  // Check if trip form has unsaved changes
+  const hasUnsavedTripChanges = useMemo(() => {
+    return tripForm.departureDate !== '' ||
+           tripForm.returnDate !== '' ||
+           tripForm.cities !== '' ||
+           tripForm.notes !== '' ||
+           tripForm.flightTicket !== null ||
+           tripForm.frequentTraveler !== false ||
+           tripForm.maxWeight !== '23' ||
+           tripForm.destination !== 'Japan';
+  }, [tripForm]);
 
   const bgColor = darkMode ? '#1a1a1a' : '#f8f9fa';
   const cardBg = darkMode ? '#2d2d2d' : 'white';
@@ -727,12 +822,35 @@ export default function SellerDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ padding: '12px', background: darkMode ? '#1a1a1a' : '#f0f9ff', borderRadius: '8px' }}>
+                  <div style={{ padding: '12px', background: darkMode ? '#1a1a1a' : '#f0f9ff', borderRadius: '8px', marginBottom: '15px' }}>
                     <div style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', marginBottom: '5px' }}>Max Luggage</div>
                     <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#2e7d32' }}>
                       {registeredTrip.maxWeight} kg
                     </div>
                   </div>
+                  <button
+                    onClick={handleEditTrip}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: darkMode ? '#444' : '#f0f0f0',
+                      color: textColor,
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = darkMode ? '#555' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = darkMode ? '#444' : '#f0f0f0';
+                    }}
+                  >
+                    ✏️ Edit Trip Details
+                  </button>
                 </div>
               ) : (
                 <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor, textAlign: 'center' }}>
@@ -1179,8 +1297,18 @@ export default function SellerDashboard() {
       </div>
 
       {/* Register Trip Modal */}
-      <Modal isOpen={isRegisterTripOpen} onClose={() => setIsRegisterTripOpen(false)} title="✈️ Register a New Trip">
+      <Modal
+        isOpen={isRegisterTripOpen}
+        onClose={() => {
+          setIsRegisterTripOpen(false);
+          setIsEditingTrip(false);
+          setEditingTripId(null);
+        }}
+        title={isEditingTrip ? "✏️ Edit Trip Details" : "✈️ Register a New Trip"}
+        hasUnsavedChanges={hasUnsavedTripChanges}
+      >
         <form onSubmit={handleRegisterTrip} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Destination with flag icons */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Destination Country *</label>
             <select
@@ -1198,14 +1326,34 @@ export default function SellerDashboard() {
             </select>
           </div>
 
+          {/* Cities visiting field */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Cities Visiting (Optional)</label>
+            <input
+              type="text"
+              value={tripForm.cities}
+              onChange={(e) => setTripForm({ ...tripForm, cities: e.target.value })}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
+              placeholder="e.g. Tokyo, Osaka, Kyoto"
+            />
+            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+              List the specific cities you'll be visiting
+            </p>
+          </div>
+
+          {/* Date inputs with validation */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Departure Date *</label>
               <input
                 type="date"
                 required
+                min={getTodayDate()}
                 value={tripForm.departureDate}
-                onChange={(e) => setTripForm({ ...tripForm, departureDate: e.target.value })}
+                onChange={(e) => {
+                  setTripForm({ ...tripForm, departureDate: e.target.value });
+                  validateTripDates(e.target.value, tripForm.returnDate);
+                }}
                 style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
               />
             </div>
@@ -1215,13 +1363,32 @@ export default function SellerDashboard() {
               <input
                 type="date"
                 required
+                min={tripForm.departureDate || getTodayDate()}
                 value={tripForm.returnDate}
-                onChange={(e) => setTripForm({ ...tripForm, returnDate: e.target.value })}
+                onChange={(e) => {
+                  setTripForm({ ...tripForm, returnDate: e.target.value });
+                  validateTripDates(tripForm.departureDate, e.target.value);
+                }}
                 style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
               />
             </div>
           </div>
 
+          {/* Date error message */}
+          {dateError && (
+            <div style={{
+              padding: '10px',
+              background: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '6px',
+              color: '#c00',
+              fontSize: '0.9rem'
+            }}>
+              {dateError}
+            </div>
+          )}
+
+          {/* Luggage weight with helper text */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Max Luggage Weight (kg) *</label>
             <input
@@ -1234,8 +1401,43 @@ export default function SellerDashboard() {
               style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
               placeholder="e.g. 23"
             />
+            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+              💡 Standard check-in bag is 23kg
+            </p>
           </div>
 
+          {/* Flight ticket upload for verified badge */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>
+              Proof of Travel (Optional)
+              {tripForm.flightTicket && <span style={{ color: '#2e7d32', marginLeft: '8px' }}>✓ Verified</span>}
+            </label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setTripForm({ ...tripForm, flightTicket: e.target.files[0] })}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '0.95rem' }}
+            />
+            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px', marginBottom: '0' }}>
+              🎫 Upload your flight ticket to get a "Verified" badge and increase buyer trust
+            </p>
+          </div>
+
+          {/* Recurring trips checkbox */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#f8f9fa', borderRadius: '8px' }}>
+            <input
+              type="checkbox"
+              id="frequentTraveler"
+              checked={tripForm.frequentTraveler}
+              onChange={(e) => setTripForm({ ...tripForm, frequentTraveler: e.target.checked })}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <label htmlFor="frequentTraveler" style={{ fontSize: '0.95rem', fontWeight: '500', cursor: 'pointer', margin: 0 }}>
+              ✈️ I travel to this destination frequently
+            </label>
+          </div>
+
+          {/* Additional notes */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '0.95rem' }}>Additional Notes (Optional)</label>
             <textarea
@@ -1248,18 +1450,97 @@ export default function SellerDashboard() {
 
           <button
             type="submit"
-            disabled={isSubmittingTrip}
+            disabled={isSubmittingTrip || !!dateError}
             className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '1.05rem', fontWeight: '700' }}
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              padding: '14px',
+              fontSize: '1.05rem',
+              fontWeight: '700',
+              opacity: (isSubmittingTrip || !!dateError) ? 0.6 : 1,
+              cursor: (isSubmittingTrip || !!dateError) ? 'not-allowed' : 'pointer'
+            }}
           >
-            {isSubmittingTrip ? 'Registering...' : 'Register Trip'}
+            {isSubmittingTrip ? (isEditingTrip ? 'Updating...' : 'Registering...') : (isEditingTrip ? 'Update Trip' : 'Register Trip')}
           </button>
         </form>
       </Modal>
 
+      {/* Success Animation Overlay */}
+      {showTripSuccess && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            maxWidth: '400px',
+            position: 'relative',
+            animation: 'scaleIn 0.5s ease'
+          }}>
+            {/* Confetti particles */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', borderRadius: '20px', pointerEvents: 'none' }}>
+              {[...Array(30)].map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    animation: `confetti 2s ease-out ${i * 0.05}s`,
+                    fontSize: '1.5rem',
+                    opacity: 0
+                  }}
+                >
+                  {['🎉', '🎊', '✨', '⭐', '🌟', '🎈', '💫'][Math.floor(Math.random() * 7)]}
+                </div>
+              ))}
+            </div>
+
+            {/* Success content */}
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: '4rem', marginBottom: '20px', animation: 'bounce 0.6s ease' }}>
+                ✈️
+              </div>
+              <h2 style={{ fontSize: '2rem', color: '#2e7d32', marginBottom: '15px', fontWeight: 'bold' }}>
+                {tripSuccessType === 'update' ? 'Trip Updated!' : 'Trip Registered!'}
+              </h2>
+              <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '20px' }}>
+                {tripSuccessType === 'update'
+                  ? 'Your trip details have been successfully updated!'
+                  : 'Your trip has been successfully registered. Start browsing marketplace requests!'}
+              </p>
+              <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                fontSize: '1rem'
+              }}>
+                🎯 Ready to earn on your trip!
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
 
-      {/* Add CSS animation for scrolling ticker */}
+      {/* Add CSS animations */}
       <style jsx global>{`
         @keyframes scroll {
           0% {
@@ -1267,6 +1548,46 @@ export default function SellerDashboard() {
           }
           100% {
             transform: translateX(-50%);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes bounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-20px);
+          }
+        }
+
+        @keyframes confetti {
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(200px) rotate(360deg);
+            opacity: 0;
           }
         }
 
