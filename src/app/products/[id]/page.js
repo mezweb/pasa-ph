@@ -15,6 +15,8 @@ export default function ProductDetailPage() {
   const params = useParams();
   const [user, setUser] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const { addToBag } = useCart();
 
   const productId = params.id;
@@ -22,14 +24,44 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
+      // Allow guest browsing - don't redirect to login
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, [router]);
+
+  // Handle share functionality
+  const handleShare = async (method) => {
+    const shareUrl = window.location.href;
+    const shareText = `Check out ${product.title} on PASA.PH - ₱${product.price?.toLocaleString()}`;
+
+    if (method === 'copy') {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Link copied to clipboard!');
+    } else if (method === 'native' && navigator.share) {
+      await navigator.share({
+        title: product.title,
+        text: shareText,
+        url: shareUrl
+      });
+    } else if (method === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+    } else if (method === 'twitter') {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+    }
+    setShowShareMenu(false);
+  };
+
+  // Calculate currency conversions (approximate rates)
+  const usdPrice = product.price ? (product.price / 56).toFixed(2) : 0; // PHP to USD
+  const jpyPrice = product.price ? (product.price * 2.7).toFixed(0) : 0; // PHP to JPY
+
+  // Determine stock status (simulate based on sellers count)
+  const stockStatus = product.sellers > 10 ? 'on-hand' : 'pre-order';
+  const isOnHand = stockStatus === 'on-hand';
+
+  // Max quantity limit
+  const MAX_QUANTITY = 5;
 
   if (!product) {
     return (
@@ -57,6 +89,24 @@ export default function ProductDetailPage() {
       <Navbar />
 
       <div className="container" style={{ padding: '40px 20px', maxWidth: '1200px' }}>
+        {/* Urgency Banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+          color: 'white',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)',
+          fontWeight: '600',
+          fontSize: '0.95rem'
+        }}>
+          <span style={{ fontSize: '1.3rem' }}>⏰</span>
+          <span>Order cutoff in 2 days — Travelers leaving soon!</span>
+        </div>
+
         {/* Breadcrumb */}
         <div style={{ marginBottom: '30px', fontSize: '0.9rem', color: '#666' }}>
           <Link href="/products" style={{ color: '#0070f3', textDecoration: 'none' }}>← Marketplace</Link>
@@ -143,7 +193,7 @@ export default function ProductDetailPage() {
               {product.title}
             </h1>
 
-            {/* Category & Country */}
+            {/* Category, Country & Stock Status */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap' }}>
               <div style={{ padding: '6px 14px', background: '#e8f5e9', color: '#2e7d32', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
                 {product.category}
@@ -151,13 +201,28 @@ export default function ProductDetailPage() {
               <div style={{ padding: '6px 14px', background: '#e3f2fd', color: '#0070f3', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
                 📍 {product.from}
               </div>
+              <div style={{
+                padding: '6px 14px',
+                background: isOnHand ? '#e8f5e9' : '#fff3e0',
+                color: isOnHand ? '#2e7d32' : '#e65100',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                border: `1px solid ${isOnHand ? '#2e7d32' : '#ff9800'}`
+              }}>
+                {isOnHand ? '✅ On-Hand' : '📦 Pre-Order'}
+              </div>
             </div>
 
-            {/* Price */}
+            {/* Price with Currency Conversion */}
             <div style={{ marginBottom: '30px' }}>
               <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>Average Price</div>
-              <div style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: '900', color: '#0070f3', lineHeight: '1' }}>
+              <div style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: '900', color: '#0070f3', lineHeight: '1', marginBottom: '10px' }}>
                 ₱{product.price?.toLocaleString() || '0'}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#999', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                <span>≈ ${usdPrice} USD</span>
+                <span>≈ ¥{jpyPrice} JPY</span>
               </div>
             </div>
 
@@ -201,14 +266,72 @@ export default function ProductDetailPage() {
               </div>
             )}
 
+            {/* Quantity Selector */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px', fontWeight: '600' }}>
+                Quantity (Max {MAX_QUANTITY})
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    border: '2px solid #e0e0e0',
+                    background: 'white',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  −
+                </button>
+                <div style={{
+                  fontSize: '1.3rem',
+                  fontWeight: 'bold',
+                  minWidth: '40px',
+                  textAlign: 'center',
+                  color: '#333'
+                }}>
+                  {quantity}
+                </div>
+                <button
+                  onClick={() => setQuantity(Math.min(MAX_QUANTITY, quantity + 1))}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    border: '2px solid #0070f3',
+                    background: 'white',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    color: '#0070f3'
+                  }}
+                >
+                  +
+                </button>
+                {quantity >= MAX_QUANTITY && (
+                  <span style={{ fontSize: '0.8rem', color: '#ff9800', fontWeight: '600' }}>
+                    Maximum reached
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', position: 'relative' }}>
               <button
                 onClick={() => {
-                  addToBag(product);
-                  alert('Added to your Pasa Bag! ✅');
+                  for (let i = 0; i < quantity; i++) {
+                    addToBag(product);
+                  }
+                  alert(`Added ${quantity} ${quantity > 1 ? 'items' : 'item'} to your Pasa Bag! ✅`);
                 }}
                 className="btn-primary"
+                id="add-to-cart-btn"
                 style={{
                   flex: 1,
                   minWidth: '200px',
@@ -225,24 +348,115 @@ export default function ProductDetailPage() {
                 <span>Add to Pasa Bag</span>
               </button>
 
-              <Link href="/buyers" style={{ flex: 1, minWidth: '200px' }}>
-                <button
-                  className="btn-secondary"
-                  style={{
-                    width: '100%',
-                    padding: '18px 30px',
-                    fontSize: '1.1rem',
-                    fontWeight: '700',
-                    justifyContent: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}
-                >
-                  <span>👥</span>
-                  <span>View Buyers</span>
-                </button>
-              </Link>
+              <button
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                style={{
+                  padding: '18px 30px',
+                  fontSize: '1.1rem',
+                  fontWeight: '700',
+                  borderRadius: '12px',
+                  border: '2px solid #0070f3',
+                  background: 'white',
+                  color: '#0070f3',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#f0f9ff';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'white';
+                }}
+              >
+                <span>📤</span>
+                <span>Share</span>
+              </button>
+
+              {/* Share Menu */}
+              {showShareMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '0',
+                  marginTop: '10px',
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  padding: '12px',
+                  zIndex: 1000,
+                  minWidth: '200px'
+                }}>
+                  <button
+                    onClick={() => handleShare('copy')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 15px',
+                      background: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '0.95rem',
+                      marginBottom: '5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    <span>🔗</span>
+                    <span>Copy Link</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('facebook')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 15px',
+                      background: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '0.95rem',
+                      marginBottom: '5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    <span>📘</span>
+                    <span>Facebook</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('twitter')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 15px',
+                      background: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '0.95rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    <span>🐦</span>
+                    <span>Twitter</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Info Box */}
@@ -256,9 +470,12 @@ export default function ProductDetailPage() {
 
         {/* Similar Products */}
         <div style={{ marginTop: '80px' }}>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '30px', color: '#333' }}>
-            Similar Products from {product.from}
+          <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '10px', color: '#333' }}>
+            🌟 Other Travelers Also Bought
           </h2>
+          <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '30px' }}>
+            From {product.from} • Trusted by hundreds of buyers
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
             {POPULAR_PRODUCTS
               .filter(p => p.from === product.from && p.id !== product.id)
@@ -306,6 +523,32 @@ export default function ProductDetailPage() {
       </div>
 
       <Footer />
+
+      {/* Sticky Add to Cart for Mobile */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          #add-to-cart-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 112, 243, 0.4) !important;
+            animation: slideUp 0.3s ease-out;
+          }
+
+          @keyframes slideUp {
+            from {
+              transform: translateY(100px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        }
+      `}</style>
     </>
   );
 }
