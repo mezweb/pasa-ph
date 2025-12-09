@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 export default function MotivationalGoal({
   currentEarnings = 0,
   flightCost = 50000,
-  goalName = "Pay off your flight ticket"
+  goalName = "Pay off your flight ticket",
+  darkMode = false
 }) {
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -24,13 +25,14 @@ export default function MotivationalGoal({
     <div style={{
       background: isComplete
         ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
-        : 'white',
-      border: isComplete ? 'none' : '1px solid #eaeaea',
+        : darkMode ? '#2d2d2d' : 'white',
+      border: isComplete ? 'none' : `1px solid ${darkMode ? '#444' : '#eaeaea'}`,
       borderRadius: '12px',
       padding: '20px',
       position: 'relative',
       overflow: 'hidden',
-      transition: 'all 0.5s ease'
+      transition: 'all 0.5s ease',
+      color: darkMode && !isComplete ? '#e0e0e0' : 'inherit'
     }}>
       {/* Confetti effect */}
       {showConfetti && (
@@ -172,10 +174,10 @@ export default function MotivationalGoal({
             </div>
           </div>
 
-          {/* Motivational message */}
+          {/* Motivational message - Feature 16: Changed "Almost there!" from red to green */}
           <div style={{
-            background: remaining <= 5000 ? '#fff3e0' : '#f0f9ff',
-            border: `1px solid ${remaining <= 5000 ? '#ff9800' : '#0070f3'}`,
+            background: remaining <= 5000 ? (darkMode ? '#1e4620' : '#e8f5e9') : (darkMode ? '#1a2332' : '#f0f9ff'),
+            border: `1px solid ${remaining <= 5000 ? '#2e7d32' : '#0070f3'}`,
             borderRadius: '8px',
             padding: '12px',
             textAlign: 'center'
@@ -183,13 +185,13 @@ export default function MotivationalGoal({
             <div style={{
               fontSize: '1.1rem',
               fontWeight: 'bold',
-              color: remaining <= 5000 ? '#e65100' : '#0070f3',
+              color: remaining <= 5000 ? '#2e7d32' : '#0070f3',
               marginBottom: '4px'
             }}>
-              {remaining <= 5000 ? '🔥 Almost there!' : '💪 Keep going!'}
+              {remaining <= 5000 ? '🎉 Almost there!' : '💪 Keep going!'}
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#666' }}>
-              You're <strong style={{ color: remaining <= 5000 ? '#e65100' : '#0070f3' }}>
+            <div style={{ fontSize: '0.85rem', color: darkMode ? '#ccc' : '#666' }}>
+              You're <strong style={{ color: remaining <= 5000 ? '#2e7d32' : '#0070f3' }}>
                 ₱{remaining.toLocaleString()}
               </strong> away from your goal!
             </div>

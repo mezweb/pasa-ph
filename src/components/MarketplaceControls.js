@@ -12,17 +12,26 @@ export default function MarketplaceControls({
   showBulkSelect,
   onToggleBulkSelect,
   selectedCount = 0,
-  onBulkAccept
+  onBulkAccept,
+  onSelectAll,
+  totalCount = 0,
+  darkMode = false
 }) {
   const [showFilters, setShowFilters] = useState(false);
 
+  const bgColor = darkMode ? '#2d2d2d' : 'white';
+  const borderColor = darkMode ? '#444' : '#eaeaea';
+  const textColor = darkMode ? '#e0e0e0' : '#333';
+  const secondaryBgColor = darkMode ? '#1a1a1a' : '#f8f9fa';
+
   return (
     <div style={{
-      background: 'white',
+      background: bgColor,
       padding: '20px',
       borderRadius: '12px',
-      border: '1px solid #eaeaea',
-      marginBottom: '20px'
+      border: `1px solid ${borderColor}`,
+      marginBottom: '20px',
+      color: textColor
     }}>
       {/* Top Row - Search and Bulk Select Toggle */}
       <div style={{
@@ -248,44 +257,75 @@ export default function MarketplaceControls({
         </div>
       )}
 
-      {/* Bulk Accept Bar */}
-      {showBulkSelect && selectedCount > 0 && (
+      {/* Bulk Accept Bar - Feature 18: Added Select All */}
+      {showBulkSelect && (
         <div style={{
-          background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+          background: selectedCount > 0 ? 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)' : secondaryBgColor,
           padding: '15px 20px',
           borderRadius: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '10px'
+          gap: '10px',
+          border: selectedCount > 0 ? 'none' : `1px solid ${borderColor}`
         }}>
-          <div style={{ color: 'white', fontWeight: '600', fontSize: '1rem' }}>
-            ✓ {selectedCount} {selectedCount === 1 ? 'item' : 'items'} selected
+          <div style={{ color: selectedCount > 0 ? 'white' : textColor, fontWeight: '600', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span>
+              {selectedCount > 0
+                ? `✓ ${selectedCount} ${selectedCount === 1 ? 'item' : 'items'} selected`
+                : 'Select items to bulk accept'}
+            </span>
+            {onSelectAll && totalCount > 0 && (
+              <button
+                onClick={onSelectAll}
+                style={{
+                  background: selectedCount === totalCount ? 'rgba(255,255,255,0.3)' : 'rgba(0,112,243,0.2)',
+                  color: selectedCount > 0 ? 'white' : '#0070f3',
+                  border: `1px solid ${selectedCount > 0 ? 'rgba(255,255,255,0.5)' : '#0070f3'}`,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                {selectedCount === totalCount ? 'Deselect All' : `Select All (${totalCount})`}
+              </button>
+            )}
           </div>
-          <button
-            onClick={onBulkAccept}
-            style={{
-              background: 'white',
-              color: '#ff9800',
-              border: 'none',
-              padding: '10px 24px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              transition: 'transform 0.2s',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            Accept All Selected →
-          </button>
+          {selectedCount > 0 && (
+            <button
+              onClick={onBulkAccept}
+              style={{
+                background: 'white',
+                color: '#ff9800',
+                border: 'none',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '1rem',
+                transition: 'transform 0.2s',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              Accept All Selected →
+            </button>
+          )}
         </div>
       )}
 

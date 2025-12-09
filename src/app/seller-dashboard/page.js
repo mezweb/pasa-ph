@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import RequestCard from '../../components/RequestCard';
 import MarketplaceControls from '../../components/MarketplaceControls';
-import WeatherWidget from '../../components/WeatherWidget';
 import ExchangeRateTicker from '../../components/ExchangeRateTicker';
 import MotivationalGoal from '../../components/MotivationalGoal';
 import Modal from '../../components/Modal';
@@ -18,10 +17,17 @@ import Link from 'next/link';
 export default function SellerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
   const [luggageWeight, setLuggageWeight] = useState(20);
+  const [darkMode, setDarkMode] = useState(false);
+  const [currency, setCurrency] = useState('PHP');
+  const [copiedShopLink, setCopiedShopLink] = useState(false);
+  const [editingTemplates, setEditingTemplates] = useState(false);
+
+  // Registered trip state
+  const [registeredTrip, setRegisteredTrip] = useState(null);
 
   // Dashboard preferences
   const [dismissedWidgets, setDismissedWidgets] = useState(() => {
@@ -50,18 +56,68 @@ export default function SellerDashboard() {
     notes: ''
   });
 
+  // Quick reply templates (now editable)
+  const [quickReplies, setQuickReplies] = useState([
+    "I'll be arriving on [date]. I can deliver to your location.",
+    "Item purchased! I'll send you a photo of the receipt shortly.",
+    "Your item has been shipped and will arrive on [date].",
+    "I'm currently in [country]. Let me know if you need anything!"
+  ]);
+
   // Mock data
   const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
   const totalBalance = 15800;
-  const currentTripDestination = 'Tokyo'; // For weather widget
+
+  // New orders count for badge
+  const newOrdersCount = 3;
+
+  // Exchange rates
+  const exchangeRates = {
+    'Japan': { currency: 'JPY', rate: 0.37 },
+    'USA': { currency: 'USD', rate: 56.5 },
+    'South Korea': { currency: 'KRW', rate: 0.043 },
+    'Singapore': { currency: 'SGD', rate: 41.2 },
+    'Hong Kong': { currency: 'HKD', rate: 7.2 },
+    'Vietnam': { currency: 'VND', rate: 0.0023 }
+  };
+
+  // Recent activity (Feature 14)
+  const recentActivity = [
+    { user: 'Maria L.', item: 'iPhone 15 Pro', location: 'Tokyo', time: '2 min ago' },
+    { user: 'John D.', item: 'Melano CC Serum', location: 'Tokyo', time: '5 min ago' },
+    { user: 'Sarah K.', item: 'Tokyo Banana', location: 'Tokyo', time: '8 min ago' }
+  ];
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.push('/login');
         return;
       }
       setUser(currentUser);
+
+      // Fetch user data for profile completion
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
+      }
+
+      // Fetch registered trips
+      const tripsQuery = query(collection(db, 'trips'));
+      const unsubscribeTrips = onSnapshot(tripsQuery, (snapshot) => {
+        const userTrips = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(trip => trip.userId === currentUser.uid && trip.status === 'active')
+          .sort((a, b) => new Date(a.departureDate) - new Date(b.departureDate));
+
+        if (userTrips.length > 0) {
+          setRegisteredTrip(userTrips[0]);
+          // Feature 15: Smart filtering - default to trip destination
+          if (regionFilter === 'all') {
+            setRegionFilter(userTrips[0].destination);
+          }
+        }
+      });
     });
 
     // Fetch ALL pending requests with enhanced data
@@ -100,6 +156,51 @@ export default function SellerDashboard() {
     };
   }, [router]);
 
+  // Calculate profile completion (Feature 12)
+  const calculateProfileCompletion = () => {
+    if (!userData) return 0;
+    const fields = ['displayName', 'email', 'photoURL', 'bio', 'city', 'deliveryAddress'];
+    const completedFields = fields.filter(field => userData[field] && userData[field].length > 0);
+    return Math.round((completedFields.length / fields.length) * 100);
+  };
+
+  // Calculate trip countdown (Feature 9)
+  const getTripCountdown = () => {
+    if (!registeredTrip || !registeredTrip.departureDate) return null;
+    const today = new Date();
+    const departure = new Date(registeredTrip.departureDate);
+    const diffTime = departure - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'Trip in progress';
+    if (diffDays === 0) return 'Departing today!';
+    if (diffDays === 1) return 'Departing tomorrow!';
+    return `Trip starts in ${diffDays} days`;
+  };
+
+  // Calculate Traveler Level (Feature 17)
+  const calculateTravelerLevel = () => {
+    const totalEarnings = weeklyEarnings.reduce((a, b) => a + b, 0);
+    if (totalEarnings >= 20000) return { level: 'Diamond', color: '#00c3ff' };
+    if (totalEarnings >= 10000) return { level: 'Gold', color: '#d4af37' };
+    return { level: 'Standard', color: '#666' };
+  };
+
+  const travelerLevel = calculateTravelerLevel();
+
+  // Convert price based on currency
+  const convertCurrency = (phpPrice) => {
+    if (currency === 'PHP') return `₱${phpPrice.toLocaleString()}`;
+
+    if (registeredTrip && exchangeRates[registeredTrip.destination]) {
+      const rate = exchangeRates[registeredTrip.destination].rate;
+      const currencyCode = exchangeRates[registeredTrip.destination].currency;
+      const converted = Math.round(phpPrice * rate);
+      return `${currencyCode} ${converted.toLocaleString()}`;
+    }
+    return `₱${phpPrice.toLocaleString()}`;
+  };
+
   // Filter and sort requests
   const filteredAndSortedRequests = useMemo(() => {
     let filtered = [...requests];
@@ -126,9 +227,8 @@ export default function SellerDashboard() {
           !metroManilaAreas.some(area => req.deliveryLocation?.includes(area))
         );
       } else {
-        filtered = filtered.filter(req =>
-          req.deliveryLocation?.toLowerCase().includes(regionFilter.replace('-', ' '))
-        );
+        // Match by destination country
+        filtered = filtered.filter(req => req.from === regionFilter);
       }
     }
 
@@ -162,17 +262,15 @@ export default function SellerDashboard() {
     return filtered;
   }, [requests, searchQuery, sortBy, regionFilter]);
 
-  // Feature 3: Renamed from totalPotentialEarnings to projectedProfit
   const projectedProfit = requests.reduce((sum, req) => sum + ((req.estimatedProfit || 0)), 0);
 
-  // Feature 4: Actionable notifications with specific links
   const notifications = [
     {
       id: 1,
       text: 'New order request for iPhone 15',
       time: '5 min ago',
       type: 'order',
-      link: '#standard-requests' // Scroll to marketplace
+      link: '#available-requests'
     },
     {
       id: 2,
@@ -190,7 +288,6 @@ export default function SellerDashboard() {
     }
   ];
 
-  // Most requested items
   const mostRequestedItems = [
     { item: 'iPhone 15', count: 45, avgPrice: 55000 },
     { item: 'Melano CC Serum', count: 38, avgPrice: 450 },
@@ -198,16 +295,13 @@ export default function SellerDashboard() {
     { item: 'Airpods Pro', count: 28, avgPrice: 12000 }
   ];
 
-  // Quick reply templates
-  const quickReplies = [
-    "I'll be arriving on [date]. I can deliver to your location.",
-    "Item purchased! I'll send you a photo of the receipt shortly.",
-    "Your item has been shipped and will arrive on [date].",
-    "I'm currently in [country]. Let me know if you need anything!"
-  ];
-
-  // Share shop link
   const shopLink = `https://pasa.ph/seller/${user?.uid || 'demo123'}`;
+
+  const handleCopyShopLink = () => {
+    navigator.clipboard.writeText(shopLink);
+    setCopiedShopLink(true);
+    setTimeout(() => setCopiedShopLink(false), 2000);
+  };
 
   const handleAcceptRequest = async (id, title) => {
     if (!confirm(`Confirm acceptance of request: ${title}?`)) return;
@@ -248,6 +342,15 @@ export default function SellerDashboard() {
     }
   };
 
+  // Feature 18: Select All
+  const handleSelectAll = () => {
+    if (selectedRequests.length === filteredAndSortedRequests.length) {
+      setSelectedRequests([]);
+    } else {
+      setSelectedRequests(filteredAndSortedRequests.map(req => req.id));
+    }
+  };
+
   const handleSelectRequest = (id) => {
     setSelectedRequests(prev => {
       if (prev.includes(id)) {
@@ -258,18 +361,6 @@ export default function SellerDashboard() {
     });
   };
 
-  // Feature 7: Dismiss widget functionality
-  const handleDismissWidget = (widgetName) => {
-    const updated = [...dismissedWidgets, widgetName];
-    setDismissedWidgets(updated);
-    localStorage.setItem('dismissedWidgets', JSON.stringify(updated));
-  };
-
-  const isWidgetDismissed = (widgetName) => {
-    return dismissedWidgets.includes(widgetName);
-  };
-
-  // Handle Register Trip submission
   const handleRegisterTrip = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -310,16 +401,23 @@ export default function SellerDashboard() {
   };
 
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
+  const profileCompletion = calculateProfileCompletion();
+  const tripCountdown = getTripCountdown();
+
+  const bgColor = darkMode ? '#1a1a1a' : '#f8f9fa';
+  const cardBg = darkMode ? '#2d2d2d' : 'white';
+  const textColor = darkMode ? '#e0e0e0' : '#333';
+  const borderColor = darkMode ? '#444' : '#eaeaea';
 
   return (
     <>
       <Navbar />
-      <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px' }}>
+      <div style={{ background: bgColor, minHeight: '100vh', paddingBottom: '60px' }}>
         <div className="container" style={{ paddingTop: '40px', paddingBottom: '40px' }}>
 
-          {/* Header with TWO prominent CTAs */}
+          {/* Header with CTAs and Dark Mode Toggle */}
           <div style={{
-            background: 'linear-gradient(135deg, #0070f3 0%, #0051cc 100%)',
+            background: darkMode ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #0070f3 0%, #0051cc 100%)',
             padding: '30px',
             borderRadius: '16px',
             marginBottom: '30px',
@@ -337,10 +435,45 @@ export default function SellerDashboard() {
               <p style={{ margin: 0, opacity: 0.95 }}>
                 Welcome back, {user?.displayName || 'Traveler'}!
               </p>
+              {/* Feature 17: Traveler Level */}
+              <div style={{ marginTop: '8px', display: 'inline-block', padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', fontSize: '0.85rem' }}>
+                ⭐ {travelerLevel.level} Traveler
+              </div>
             </div>
 
-            {/* Feature 6: Register Trip button prominently placed */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Feature 20: Dark Mode Toggle */}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
+
+              {/* Feature 1: Help Link */}
+              <Link href="/support">
+                <button style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  ❓ Help
+                </button>
+              </Link>
+
               <button
                 onClick={() => setIsRegisterTripOpen(true)}
                 style={{
@@ -365,6 +498,7 @@ export default function SellerDashboard() {
                 <span>Register Trip</span>
               </button>
 
+              {/* Feature 8: Notification Badge */}
               <Link href="/fulfillment-list">
                 <button style={{
                   background: 'white',
@@ -376,43 +510,197 @@ export default function SellerDashboard() {
                   fontWeight: 'bold',
                   fontSize: '1.2rem',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                  transition: 'transform 0.2s'
+                  transition: 'transform 0.2s',
+                  position: 'relative'
                 }}
                 onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                   📋 View Orders
+                  {newOrdersCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: '#ff4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {newOrdersCount}
+                    </span>
+                  )}
                 </button>
               </Link>
             </div>
           </div>
 
-          {/* Feature 9: Exchange Rate Ticker */}
-          <ExchangeRateTicker />
+          {/* Feature 9: Trip Countdown */}
+          {tripCountdown && (
+            <div style={{
+              background: darkMode ? '#2d2d2d' : '#fff3cd',
+              padding: '15px 25px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: `1px solid ${darkMode ? '#444' : '#ffc107'}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: darkMode ? textColor : '#856404'
+            }}>
+              <span style={{ fontSize: '1.5rem' }}>⏰</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{tripCountdown}</span>
+            </div>
+          )}
+
+          {/* Feature 10: Exchange Rate with Timestamp & Feature 4: Currency Toggle */}
+          <div style={{ marginBottom: '20px' }}>
+            <ExchangeRateTicker />
+            {registeredTrip && (
+              <div style={{
+                background: cardBg,
+                padding: '15px 25px',
+                borderRadius: '12px',
+                marginTop: '10px',
+                border: `1px solid ${borderColor}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                color: textColor
+              }}>
+                <span style={{ fontSize: '0.9rem' }}>
+                  Display prices in:
+                </span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => setCurrency('PHP')}
+                    style={{
+                      padding: '8px 16px',
+                      background: currency === 'PHP' ? '#0070f3' : '#e0e0e0',
+                      color: currency === 'PHP' ? 'white' : '#333',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    PHP
+                  </button>
+                  <button
+                    onClick={() => setCurrency('DEST')}
+                    style={{
+                      padding: '8px 16px',
+                      background: currency === 'DEST' ? '#0070f3' : '#e0e0e0',
+                      color: currency === 'DEST' ? 'white' : '#333',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {registeredTrip && exchangeRates[registeredTrip.destination]?.currency || 'USD'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feature 12: Profile Completion Progress */}
+          <div style={{
+            background: cardBg,
+            padding: '20px 25px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            border: `1px solid ${borderColor}`,
+            color: textColor
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontWeight: '600' }}>Profile Completion</span>
+              <span style={{ fontWeight: 'bold', color: '#0070f3' }}>{profileCompletion}%</span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '12px',
+              background: darkMode ? '#444' : '#e0e0e0',
+              borderRadius: '6px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${profileCompletion}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #0070f3, #00a8ff)',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+            {profileCompletion < 100 && (
+              <Link href="/profile">
+                <button style={{
+                  marginTop: '12px',
+                  padding: '8px 16px',
+                  background: '#0070f3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}>
+                  Complete Profile
+                </button>
+              </Link>
+            )}
+          </div>
+
+          {/* Feature 14: Recent Activity Ticker */}
+          <div style={{
+            background: darkMode ? '#2d2d2d' : '#e3f2fd',
+            padding: '15px 25px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            border: `1px solid ${darkMode ? '#444' : '#90caf9'}`,
+            color: darkMode ? textColor : '#1565c0',
+            overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', animation: 'scroll 20s linear infinite' }}>
+              <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>🔥 Live Activity:</span>
+              {recentActivity.map((activity, idx) => (
+                <span key={idx} style={{ whiteSpace: 'nowrap' }}>
+                  {activity.user} just requested <strong>{activity.item}</strong> from {activity.location} • {activity.time}
+                </span>
+              ))}
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px', marginBottom: '30px' }}>
 
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* Feature 3: Renamed to "Projected Profit" */}
-              <div style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
+              {/* Projected Profit */}
+              <div style={{ background: darkMode ? 'linear-gradient(135deg, #1e5631 0%, #16491f 100%)' : 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   💰 Projected Profit
                 </div>
                 <div style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '5px' }}>
-                  ₱{projectedProfit.toLocaleString()}
+                  {convertCurrency(projectedProfit)}
                 </div>
                 <div style={{ fontSize: '0.85rem', opacity: '0.9' }}>
                   From {requests.length} open requests available
                 </div>
               </div>
 
-              {/* Feature 10: Motivational Goal */}
+              {/* Feature 16: Fixed Motivational Goal Color */}
               <MotivationalGoal
                 currentEarnings={weeklyEarnings.reduce((a, b) => a + b, 0)}
                 flightCost={20000}
                 goalName="Pay off your next flight!"
+                darkMode={darkMode}
               />
 
             </div>
@@ -420,11 +708,57 @@ export default function SellerDashboard() {
             {/* Right Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* Feature 8: Weather Widget */}
-              <WeatherWidget destination={currentTripDestination} />
+              {/* Feature 3: Trip Details Card (replaces Weather) */}
+              {registeredTrip ? (
+                <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
+                  <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>✈️ Registered Trip</h3>
+                  <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#0070f3', marginBottom: '10px' }}>
+                      {registeredTrip.destination}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+                      <div>
+                        <div style={{ color: darkMode ? '#999' : '#666', fontSize: '0.8rem' }}>Departure</div>
+                        <div style={{ fontWeight: '600' }}>{new Date(registeredTrip.departureDate).toLocaleDateString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: darkMode ? '#999' : '#666', fontSize: '0.8rem' }}>Return</div>
+                        <div style={{ fontWeight: '600' }}>{new Date(registeredTrip.returnDate).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: '12px', background: darkMode ? '#1a1a1a' : '#f0f9ff', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', marginBottom: '5px' }}>Max Luggage</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#2e7d32' }}>
+                      {registeredTrip.maxWeight} kg
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor, textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>✈️ No Trip Registered</h3>
+                  <p style={{ color: darkMode ? '#999' : '#666', marginBottom: '15px' }}>
+                    Register your next trip to see relevant requests
+                  </p>
+                  <button
+                    onClick={() => setIsRegisterTripOpen(true)}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#0070f3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Register Trip
+                  </button>
+                </div>
+              )}
 
               {/* Weekly Earnings Graph */}
-              <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
+              <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
                 <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>📈 Weekly Earnings</h3>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '150px' }}>
                   {weeklyEarnings.map((earning, idx) => (
@@ -438,34 +772,37 @@ export default function SellerDashboard() {
                         position: 'relative',
                         transition: 'height 0.3s ease'
                       }}>
-                        <div style={{ position: 'absolute', top: '-20px', fontSize: '0.7rem', fontWeight: 'bold', width: '100%', textAlign: 'center', color: '#333' }}>
+                        <div style={{ position: 'absolute', top: '-20px', fontSize: '0.7rem', fontWeight: 'bold', width: '100%', textAlign: 'center' }}>
                           ₱{(earning / 1000).toFixed(1)}k
                         </div>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#999' }}>
+                      <div style={{ fontSize: '0.7rem', color: darkMode ? '#999' : '#999' }}>
                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem', color: '#666' }}>
-                  Total this week: <strong style={{ color: '#0070f3' }}>₱{weeklyEarnings.reduce((a, b) => a + b, 0).toLocaleString()}</strong>
+                <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem' }}>
+                  Total this week: <strong style={{ color: '#0070f3' }}>{convertCurrency(weeklyEarnings.reduce((a, b) => a + b, 0))}</strong>
                 </div>
               </div>
 
-              {/* Feature 4: Actionable Notifications */}
-              <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔔 Recent Notifications</h3>
+              {/* Notifications with Select All */}
+              <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>🔔 Recent Notifications</h3>
+                  {/* Feature 18: Select All would go here for notifications bulk actions */}
+                </div>
                 {notifications.map(notif => (
                   <Link key={notif.id} href={notif.link} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{
                       padding: '12px',
-                      borderBottom: '1px solid #f0f0f0',
+                      borderBottom: `1px solid ${darkMode ? '#444' : '#f0f0f0'}`,
                       cursor: 'pointer',
                       transition: 'background 0.2s'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.background = '#f9f9f9'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    onMouseOver={(e) => e.currentTarget.style.background = darkMode ? '#3d3d3d' : '#f9f9f9'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
@@ -476,46 +813,91 @@ export default function SellerDashboard() {
                         </span>
                         <span style={{ color: '#0070f3', fontSize: '0.75rem' }}>→</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#999' }}>{notif.time}</div>
+                      <div style={{ fontSize: '0.75rem', color: darkMode ? '#999' : '#999' }}>{notif.time}</div>
                     </div>
                   </Link>
                 ))}
               </div>
 
-              {/* Quick Reply Templates */}
-              <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-                <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>💬 Quick Reply Templates</h3>
-                {quickReplies.map((reply, idx) => (
+              {/* Feature 6: Editable Quick Reply Templates */}
+              <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>💬 Quick Reply Templates</h3>
                   <button
-                    key={idx}
-                    onClick={() => navigator.clipboard.writeText(reply)}
+                    onClick={() => setEditingTemplates(!editingTemplates)}
                     style={{
-                      width: '100%',
-                      padding: '10px',
-                      marginBottom: '8px',
-                      background: '#f9f9f9',
-                      border: '1px solid #eaeaea',
-                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      background: darkMode ? '#444' : '#f0f0f0',
+                      color: textColor,
+                      border: 'none',
+                      borderRadius: '6px',
                       cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: '0.85rem',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = '#0070f3';
-                      e.currentTarget.style.color = 'white';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = '#f9f9f9';
-                      e.currentTarget.style.color = 'inherit';
+                      fontSize: '0.8rem',
+                      fontWeight: '600'
                     }}
                   >
-                    {reply}
+                    {editingTemplates ? 'Done' : 'Edit'}
                   </button>
-                ))}
-                <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '10px' }}>
-                  Click any template to copy to clipboard
                 </div>
+                {quickReplies.map((reply, idx) => (
+                  editingTemplates ? (
+                    <input
+                      key={idx}
+                      value={reply}
+                      onChange={(e) => {
+                        const updated = [...quickReplies];
+                        updated[idx] = e.target.value;
+                        setQuickReplies(updated);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        marginBottom: '8px',
+                        background: darkMode ? '#1a1a1a' : '#fff',
+                        color: textColor,
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: '8px',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                  ) : (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        navigator.clipboard.writeText(reply);
+                        alert('Template copied!');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        marginBottom: '8px',
+                        background: darkMode ? '#3d3d3d' : '#f9f9f9',
+                        color: textColor,
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontSize: '0.85rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = '#0070f3';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = darkMode ? '#3d3d3d' : '#f9f9f9';
+                        e.currentTarget.style.color = textColor;
+                      }}
+                    >
+                      {reply}
+                    </button>
+                  )
+                ))}
+                {!editingTemplates && (
+                  <div style={{ fontSize: '0.75rem', color: darkMode ? '#999' : '#999', marginTop: '10px' }}>
+                    Click any template to copy to clipboard
+                  </div>
+                )}
               </div>
 
             </div>
@@ -524,11 +906,11 @@ export default function SellerDashboard() {
           {/* Bottom Row - Utilities */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' }}>
 
-            {/* Luggage Calculator */}
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
+            {/* Feature 5: Luggage Calculator with Progress Bar */}
+            <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🧳 Luggage Calculator</h3>
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ fontSize: '0.85rem', color: '#666', display: 'block', marginBottom: '5px' }}>
+                <label style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', display: 'block', marginBottom: '5px' }}>
                   Current Weight (kg):
                 </label>
                 <input
@@ -539,44 +921,61 @@ export default function SellerDashboard() {
                   onChange={(e) => setLuggageWeight(Number(e.target.value))}
                   style={{ width: '100%' }}
                 />
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0070f3' }}>{luggageWeight} kg</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0070f3', marginBottom: '10px' }}>{luggageWeight} kg</div>
+
+                {/* Visual Capacity Bar */}
+                <div style={{
+                  width: '100%',
+                  height: '20px',
+                  background: darkMode ? '#444' : '#e0e0e0',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{
+                    width: `${(luggageWeight / 23) * 100}%`,
+                    height: '100%',
+                    background: luggageWeight > 20 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #2e7d32, #4caf50)',
+                    transition: 'width 0.3s ease, background 0.3s ease'
+                  }} />
+                </div>
               </div>
-              <div style={{ padding: '15px', background: '#f0f9ff', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '5px' }}>Remaining Capacity:</div>
+              <div style={{ padding: '15px', background: darkMode ? '#1a1a1a' : '#f0f9ff', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', marginBottom: '5px' }}>Remaining Capacity:</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32' }}>
                   {23 - luggageWeight} kg
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: darkMode ? '#999' : '#666', marginTop: '8px' }}>
                   ≈ {Math.floor((23 - luggageWeight) * 0.8)} items (avg 1.25kg each)
                 </div>
               </div>
             </div>
 
             {/* Most Requested Items */}
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
+            <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔥 Most Requested Items</h3>
               {mostRequestedItems.slice(0, 4).map((item, idx) => (
                 <div key={idx} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   padding: '10px',
-                  borderBottom: idx < 3 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: idx < 3 ? `1px solid ${darkMode ? '#444' : '#f0f0f0'}` : 'none'
                 }}>
                   <div>
                     <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>{item.item}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{item.count} requests</div>
+                    <div style={{ fontSize: '0.75rem', color: darkMode ? '#999' : '#999' }}>{item.count} requests</div>
                   </div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#2e7d32' }}>
-                    ₱{item.avgPrice.toLocaleString()}
+                    {convertCurrency(item.avgPrice)}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Share My Shop */}
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
+            {/* Feature 7: Share My Shop with Green "Copied!" */}
+            <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
               <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>🔗 Share My Shop</h3>
-              <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
+              <p style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', marginBottom: '15px' }}>
                 Share your personalized shop link with buyers
               </p>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -587,71 +986,95 @@ export default function SellerDashboard() {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    border: '1px solid #eaeaea',
+                    border: `1px solid ${borderColor}`,
                     borderRadius: '6px',
                     fontSize: '0.85rem',
-                    background: '#f9f9f9'
+                    background: darkMode ? '#1a1a1a' : '#f9f9f9',
+                    color: textColor
                   }}
                 />
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shopLink);
-                    alert('Link copied to clipboard!');
-                  }}
+                  onClick={handleCopyShopLink}
                   style={{
                     padding: '10px 20px',
-                    background: '#0070f3',
+                    background: copiedShopLink ? '#2e7d32' : '#0070f3',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    transition: 'all 0.3s'
                   }}
                 >
-                  Copy
+                  {copiedShopLink ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Feature 5: Withdraw Button + Guidelines */}
+          {/* Feature 11: Withdraw Button (grayed out if balance is 0) & Feature 13: Tooltip */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '25px', marginBottom: '40px' }}>
 
-            {/* Feature 5: Available Balance with Withdraw Button */}
-            <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
+            <div style={{ background: darkMode ? 'linear-gradient(135deg, #047857 0%, #065f46 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '25px', borderRadius: '12px', color: 'white' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: '1.1rem' }}>💳 Available Balance</h3>
               <div style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '15px' }}>
-                ₱{totalBalance.toLocaleString()}
+                {convertCurrency(totalBalance)}
               </div>
               <button
                 onClick={() => router.push('/payout')}
+                disabled={totalBalance === 0}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'white',
-                  color: '#10b981',
+                  background: totalBalance === 0 ? '#999' : 'white',
+                  color: totalBalance === 0 ? '#666' : '#10b981',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: totalBalance === 0 ? 'not-allowed' : 'pointer',
                   fontWeight: 'bold',
                   fontSize: '1rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  opacity: totalBalance === 0 ? 0.5 : 1
                 }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                onMouseOver={(e) => {
+                  if (totalBalance > 0) e.currentTarget.style.transform = 'scale(1.02)';
+                }}
                 onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <span>💸</span>
-                <span>Withdraw Funds</span>
+                <span>{totalBalance === 0 ? 'No Balance' : 'Withdraw Funds'}</span>
               </button>
             </div>
 
-            <div style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #eaeaea' }}>
-              <h3 style={{ margin: '0 0 15px', fontSize: '1.1rem' }}>📖 Traveler Guidelines</h3>
-              <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
+            <div style={{ background: cardBg, padding: '25px', borderRadius: '12px', border: `1px solid ${borderColor}`, color: textColor }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📖 Traveler Guidelines</h3>
+                {/* Feature 13: Tooltip */}
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <span style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: '#0070f3',
+                    color: 'white',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    cursor: 'help'
+                  }}
+                  title="Service fees help cover platform costs including payment processing, customer support, and trust & safety measures."
+                  >
+                    ?
+                  </span>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: darkMode ? '#999' : '#666', marginBottom: '15px' }}>
                 Learn about prohibited items and travel regulations
               </p>
               <Link href="/trust-and-safety">
@@ -671,9 +1094,7 @@ export default function SellerDashboard() {
             </div>
           </div>
 
-          {/* MARKETPLACE SECTION WITH ALL NEW FEATURES */}
-
-          {/* Marketplace Controls (Search, Sort, Filter, Bulk Select) */}
+          {/* MARKETPLACE SECTION */}
           <MarketplaceControls
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -688,13 +1109,16 @@ export default function SellerDashboard() {
             }}
             selectedCount={selectedRequests.length}
             onBulkAccept={handleBulkAccept}
+            onSelectAll={handleSelectAll}
+            totalCount={filteredAndSortedRequests.length}
+            darkMode={darkMode}
           />
 
           {/* Available Requests */}
-          <div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '15px' }}>📋 Available Requests</h2>
+          <div id="available-requests">
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '15px', color: textColor }}>📋 Available Requests</h2>
             {loading ? (
-              <p style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Loading requests...</p>
+              <p style={{ textAlign: 'center', padding: '40px', color: darkMode ? '#999' : '#999' }}>Loading requests...</p>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                 {filteredAndSortedRequests.map(req => (
@@ -705,14 +1129,47 @@ export default function SellerDashboard() {
                     isSelected={selectedRequests.includes(req.id)}
                     onSelect={handleSelectRequest}
                     showBulkSelect={showBulkSelect}
+                    darkMode={darkMode}
+                    convertCurrency={convertCurrency}
                   />
                 ))}
+                {/* Feature 2: Empty State CTA */}
                 {filteredAndSortedRequests.length === 0 && (
-                  <p style={{ color: '#999', gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-                    {requests.length > 0
-                      ? "No requests match your current filters. Try adjusting your search or filters."
-                      : "No requests available at this time. Check back soon!"}
-                  </p>
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    textAlign: 'center',
+                    padding: '60px 40px',
+                    background: cardBg,
+                    borderRadius: '12px',
+                    border: `1px solid ${borderColor}`,
+                    color: textColor
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '20px' }}>📦</div>
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>
+                      {requests.length > 0
+                        ? "No requests match your filters"
+                        : "No requests available"}
+                    </h3>
+                    <p style={{ color: darkMode ? '#999' : '#666', marginBottom: '20px' }}>
+                      {requests.length > 0
+                        ? "Try adjusting your search or filters to see more requests."
+                        : "Check back soon for new opportunities!"}
+                    </p>
+                    <Link href="/products">
+                      <button style={{
+                        padding: '12px 24px',
+                        background: '#0070f3',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1rem'
+                      }}>
+                        Browse Marketplace for Requests
+                      </button>
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
@@ -801,6 +1258,24 @@ export default function SellerDashboard() {
       </Modal>
 
       <Footer />
+
+      {/* Add CSS animation for scrolling ticker */}
+      <style jsx global>{`
+        @keyframes scroll {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .container > div {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
