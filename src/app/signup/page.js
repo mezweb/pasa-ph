@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -9,7 +9,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nameInputRef = useRef(null);
@@ -503,5 +503,17 @@ export default function SignupPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '60px 20px', textAlign: 'center', minHeight: '100vh' }}>
+        <div style={{ fontSize: '2rem' }}>Loading...</div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   );
 }
