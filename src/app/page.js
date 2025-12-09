@@ -175,10 +175,34 @@ export default function Home() {
           fontSize: 'clamp(2rem, 6vw, 3.5rem)',
           fontWeight: '900',
           marginBottom: 'clamp(10px, 2vh, 15px)',
-          lineHeight: 1.2
+          lineHeight: 1.2,
+          animation: 'fadeInUp 0.8s ease-out'
         }}>
-          Shop the World, Delivered by Travelers
+          <span style={{ display: 'inline-block', animation: 'slideIn 0.6s ease-out' }}>Shop the World</span>
+          <span style={{ display: 'inline-block', animation: 'slideIn 0.8s ease-out' }}>, Delivered by Travelers</span>
         </h1>
+        <style jsx>{`
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateX(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+        `}</style>
         <p style={{
           fontSize: 'clamp(1rem, 3vw, 1.3rem)',
           marginBottom: 'clamp(20px, 4vh, 30px)',
