@@ -34,7 +34,7 @@ export default function OffersPage() {
           countries: data.travelCountries || [],
           level: data.level || 'Standard',
           bio: data.bio || '',
-          city: data.city || '',
+          city: data.city || data.homeCity || '',
           phoneNumber: data.phoneNumber || '',
           languages: data.languages || [],
           responseRate: data.responseRate || 95,
