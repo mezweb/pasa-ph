@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { POPULAR_PRODUCTS } from '../lib/products';
 import { POPULAR_SELLERS } from '../lib/sellers';
 import { useCart } from '../context/CartContext';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 // Country data with flags
 const COUNTRY_DATA = {
@@ -54,6 +54,39 @@ export default function Home() {
   const [recentSearches, setRecentSearches] = useState([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [savedSearches, setSavedSearches] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // --- FETCH ITEMS FROM FIRESTORE ---
+  useEffect(() => {
+    const q = query(collection(db, "requests"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const items = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || '',
+          category: data.category || 'Other',
+          image: data.image || 'https://placehold.co/400x400?text=No+Image',
+          images: data.images || [data.image || 'https://placehold.co/400x400?text=No+Image'],
+          from: data.from || '',
+          to: data.to || '',
+          price: data.price || 0,
+          requests: data.requests || 0,
+          sellers: data.sellers || 0,
+          isHot: data.isHot || false,
+          estimatedDelivery: data.estimatedDelivery || '7-10 Days',
+          topSellers: data.topSellers || [],
+          userId: data.userId || '',
+          userName: data.userName || '',
+          createdAt: data.createdAt || null
+        };
+      });
+      setProducts(items);
+      setLoadingProducts(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- CHECK AUTH STATUS ---
   useEffect(() => {
@@ -122,7 +155,7 @@ export default function Home() {
   };
 
   // Filter Products (Category + Country + Search + Arrival + Availability)
-  const filteredProducts = POPULAR_PRODUCTS.filter(p => {
+  const filteredProducts = products.filter(p => {
     const matchesCategory = category === 'All' || p.category === category;
     const matchesCountry = countryFilter === 'All' || p.from === countryFilter;
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.from.toLowerCase().includes(searchQuery.toLowerCase());

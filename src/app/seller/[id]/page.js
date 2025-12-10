@@ -537,42 +537,6 @@ export default function SellerProfilePage() {
       <div style={{ background: '#f8f9fa', minHeight: '60vh', padding: '40px 0' }}>
         <div className="container" style={{ maxWidth: '900px' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.5rem' }}>Top Items & Recent Activity</h2>
-                <button
-                    className="btn-primary"
-                    onClick={() => router.push(`/request-item/${seller.name}`)}
-                    style={{ fontSize: '0.9rem' }}
-                >
-                    Request Item from {seller.name}
-                </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-                {seller.topItems.map(item => (
-                    <Link href={getProductLink(item.title)} key={item.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eaeaea', transition: 'transform 0.2s', cursor: 'pointer', height: '100%' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                            <div style={{ height: '180px', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <img src={item.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                            <div style={{ padding: '15px' }}>
-                                <h4 style={{ margin: '0 0 5px' }}>{item.title}</h4>
-                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '10px' }}>{item.from} &rarr; {item.to}</div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 'bold', color: '#0070f3' }}>₱{item.price}</span>
-                                    <span style={{ fontSize: '0.7rem', background: '#e8f5e9', color: '#2e7d32', padding: '2px 6px', borderRadius: '4px' }}>SOLD RECENTLY</span>
-                                </div>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
-
-                <div style={{ background: 'white', borderRadius: '8px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#888', minHeight: '250px' }}>
-                    <span style={{ fontSize: '2rem', marginBottom: '10px' }}>🛍️</span>
-                    See all 50+ items sold
-                </div>
-            </div>
-
             {/* REVIEWS SECTION */}
             <div style={{ marginTop: '60px' }}>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '20px' }}>Reviews & Ratings</h2>
