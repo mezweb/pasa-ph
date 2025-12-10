@@ -76,7 +76,8 @@ function SignupContent() {
             phoneNumber: phoneNumber || '',
             referralCode: referralCode || '',
             createdAt: serverTimestamp(),
-            isProfileComplete: false
+            isProfileComplete: false,
+            isVisible: false // Hidden from buyers until profile is completed
         });
     }
 

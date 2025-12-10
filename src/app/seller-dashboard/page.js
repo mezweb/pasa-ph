@@ -186,7 +186,7 @@ export default function SellerDashboard() {
       { key: 'email', weight: 10 },
       { key: 'photoURL', weight: 15 },
       { key: 'bio', weight: 20 },
-      { key: 'city', weight: 10 },
+      { key: 'city', weight: 10, fallbackKey: 'homeCity' },
       { key: 'phoneNumber', weight: 15 },
       { key: 'travelCountries', weight: 10, isArray: true },
       { key: 'deliveryAddress', weight: 5 }
@@ -194,12 +194,19 @@ export default function SellerDashboard() {
 
     let totalScore = 0;
     requiredFields.forEach(field => {
+      let value = userData[field.key];
+
+      // Check fallback key if primary key is empty
+      if (field.fallbackKey && (!value || (typeof value === 'string' && value.trim().length === 0))) {
+        value = userData[field.fallbackKey];
+      }
+
       if (field.isArray) {
-        if (userData[field.key] && userData[field.key].length > 0) {
+        if (value && value.length > 0) {
           totalScore += field.weight;
         }
       } else {
-        if (userData[field.key] && userData[field.key].toString().trim().length > 0) {
+        if (value && value.toString().trim().length > 0) {
           totalScore += field.weight;
         }
       }
@@ -218,7 +225,7 @@ export default function SellerDashboard() {
     if (userData && showProfileModal) {
       setProfileFormData({
         bio: userData.bio || '',
-        city: userData.city || '',
+        city: userData.city || userData.homeCity || '',
         phoneNumber: userData.phoneNumber || '',
         travelCountries: userData.travelCountries || [],
         languages: userData.languages || [],
