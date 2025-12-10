@@ -139,7 +139,8 @@ export default function StartSellingPage() {
         },
 
         // Defaults
-        isProfileComplete: true,
+        isProfileComplete: false, // Will complete profile in seller dashboard
+        isVisible: false, // Will be visible after completing profile in dashboard
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }, { merge: true });
