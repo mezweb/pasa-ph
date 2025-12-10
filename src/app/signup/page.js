@@ -85,7 +85,7 @@ function SignupContent() {
 
     // Auto-login and redirect
     if (selectedRole === 'seller') {
-        router.push('/seller-dashboard?setupProfile=true');
+        router.push('/start-selling');
     } else {
         router.push('/buyer-onboarding');
     }
