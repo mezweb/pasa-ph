@@ -64,6 +64,20 @@ export default function SellerDashboard() {
   const [tripSuccessType, setTripSuccessType] = useState('register'); // 'register' or 'update'
   const [dateError, setDateError] = useState('');
 
+  // List Item Modal state
+  const [isListItemModalOpen, setIsListItemModalOpen] = useState(false);
+  const [newItem, setNewItem] = useState({
+    title: '',
+    from: 'Japan',
+    to: 'Manila',
+    price: '',
+    category: 'Food',
+    image: '',
+    quantity: 1,
+    description: ''
+  });
+  const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+
   // Profile Completion Modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileStep, setProfileStep] = useState(1); // 1-4 steps
@@ -623,6 +637,51 @@ export default function SellerDashboard() {
     }));
   };
 
+  // Handle List Item
+  const handleListItem = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert('Please log in to list an item');
+      return;
+    }
+
+    setIsSubmittingItem(true);
+    try {
+      // Use placeholder if no image link provided
+      const finalImage = newItem.image || `https://placehold.co/600x400/e3f2fd/0070f3?text=${encodeURIComponent(newItem.title)}`;
+
+      await addDoc(collection(db, "requests"), {
+        ...newItem,
+        price: parseFloat(newItem.price),
+        quantity: parseInt(newItem.quantity),
+        image: finalImage,
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || 'https://placehold.co/32x32?text=U',
+        createdAt: serverTimestamp()
+      });
+
+      // Reset form
+      setNewItem({
+        title: '',
+        from: 'Japan',
+        to: 'Manila',
+        price: '',
+        category: 'Food',
+        image: '',
+        quantity: 1,
+        description: ''
+      });
+      setIsListItemModalOpen(false);
+      alert('✅ Item listed successfully! It will appear in the marketplace.');
+    } catch (error) {
+      console.error('Error listing item:', error);
+      alert('Failed to list item. Please try again.');
+    } finally {
+      setIsSubmittingItem(false);
+    }
+  };
+
   const maxWeeklyEarning = Math.max(...weeklyEarnings);
   const profileCompletion = calculateProfileCompletion();
   const tripCountdown = getTripCountdown();
@@ -708,6 +767,30 @@ export default function SellerDashboard() {
                   ❓ Help
                 </button>
               </Link>
+
+              <button
+                onClick={() => setIsListItemModalOpen(true)}
+                style={{
+                  background: '#2e7d32',
+                  color: 'white',
+                  border: 'none',
+                  padding: '18px 36px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '1.2rem',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span>📦</span>
+                <span>List Item</span>
+              </button>
 
               <button
                 onClick={() => setIsRegisterTripOpen(true)}
@@ -1694,6 +1777,221 @@ export default function SellerDashboard() {
           >
             {isSubmittingTrip ? (isEditingTrip ? 'Updating...' : 'Registering...') : (isEditingTrip ? 'Update Trip' : 'Register Trip')}
           </button>
+        </form>
+      </Modal>
+
+      {/* List Item Modal */}
+      <Modal
+        isOpen={isListItemModalOpen}
+        onClose={() => setIsListItemModalOpen(false)}
+        title="📦 List a New Item"
+      >
+        <form onSubmit={handleListItem} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Item Title *</label>
+            <input
+              type="text"
+              required
+              value={newItem.title}
+              onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+              placeholder="e.g. Tokyo Banana (12 pieces)"
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>From *</label>
+              <select
+                required
+                value={newItem.from}
+                onChange={(e) => setNewItem({ ...newItem, from: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="Japan">🇯🇵 Japan</option>
+                <option value="USA">🇺🇸 USA</option>
+                <option value="South Korea">🇰🇷 South Korea</option>
+                <option value="Singapore">🇸🇬 Singapore</option>
+                <option value="Hong Kong">🇭🇰 Hong Kong</option>
+                <option value="Vietnam">🇻🇳 Vietnam</option>
+                <option value="Bulacan">Bulacan</option>
+                <option value="Pampanga">Pampanga</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>To *</label>
+              <select
+                required
+                value={newItem.to}
+                onChange={(e) => setNewItem({ ...newItem, to: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="Manila">Manila</option>
+                <option value="Makati">Makati</option>
+                <option value="Quezon City">Quezon City</option>
+                <option value="BGC">BGC</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Category *</label>
+              <select
+                required
+                value={newItem.category}
+                onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="Food">🍜 Food</option>
+                <option value="Beauty">💄 Beauty</option>
+                <option value="Electronics">📱 Electronics</option>
+                <option value="Clothing">👕 Clothing</option>
+                <option value="Other">📦 Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Price (₱) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={newItem.price}
+                onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+                placeholder="500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Quantity *</label>
+            <input
+              type="number"
+              required
+              min="1"
+              value={newItem.quantity}
+              onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+              placeholder="1"
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Description</label>
+            <textarea
+              value={newItem.description}
+              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                minHeight: '100px',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+              placeholder="Add any details about the item..."
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Image URL (Optional)</label>
+            <input
+              type="url"
+              value={newItem.image}
+              onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+              placeholder="https://example.com/image.jpg"
+            />
+            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
+              Leave blank to auto-generate a placeholder image
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setIsListItemModalOpen(false)}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: '#e0e0e0',
+                color: '#333',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '1rem'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmittingItem}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: isSubmittingItem ? '#ccc' : '#2e7d32',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isSubmittingItem ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold',
+                fontSize: '1rem',
+                opacity: isSubmittingItem ? 0.6 : 1
+              }}
+            >
+              {isSubmittingItem ? 'Listing...' : '📦 List Item'}
+            </button>
+          </div>
         </form>
       </Modal>
 
