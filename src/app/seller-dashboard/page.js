@@ -249,17 +249,12 @@ export default function SellerDashboard() {
     }
   }, [userData, showProfileModal]);
 
-  // Auto-open profile modal if redirected from signup
+  // Auto-open profile modal if profile is incomplete
   useEffect(() => {
-    if (typeof window !== 'undefined' && userData && !userData.isProfileComplete) {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('setupProfile') === 'true') {
-        setShowProfileModal(true);
-        // Remove the query parameter from URL
-        router.replace('/seller-dashboard');
-      }
+    if (userData && !userData.isProfileComplete) {
+      setShowProfileModal(true);
     }
-  }, [userData, router]);
+  }, [userData]);
 
   // Calculate trip countdown (Feature 9)
   const getTripCountdown = () => {
