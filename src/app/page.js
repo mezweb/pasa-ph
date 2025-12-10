@@ -36,14 +36,6 @@ const SEARCH_SUGGESTIONS = [
   { term: 'Pasalubong', category: 'Food', trending: false }
 ];
 
-// Pasalubong Collections
-const PASALUBONG_COLLECTIONS = [
-  { id: 'office', name: 'Office Snacks', emoji: '🏢', description: 'Perfect for sharing at work' },
-  { id: 'skincare', name: 'Skincare Haul', emoji: '✨', description: 'K-Beauty & J-Beauty essentials' },
-  { id: 'gifts', name: 'Gift Sets', emoji: '🎁', description: 'Ready-to-give presents' },
-  { id: 'foodie', name: 'Foodie Favorites', emoji: '🍜', description: 'Must-try international treats' }
-];
-
 export default function Home() {
   const [category, setCategory] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All'); // New Country Filter State
@@ -758,7 +750,7 @@ export default function Home() {
             </div>
         </div>
 
-        {/* RESULTS COUNT & PASALUBONG COLLECTIONS */}
+        {/* RESULTS COUNT */}
         <div style={{ marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Results Count */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
@@ -778,50 +770,6 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Pasalubong Collections */}
-          <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#666', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              🎁 Pasalubong Collections
-            </div>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
-              {PASALUBONG_COLLECTIONS.map(col => (
-                <button
-                  key={col.id}
-                  onClick={() => {
-                    setSearchQuery(col.name);
-                    document.getElementById('shop')?.scrollIntoView({behavior: 'smooth'});
-                  }}
-                  style={{
-                    padding: '12px 20px',
-                    borderRadius: '12px',
-                    border: '1px solid #ddd',
-                    background: 'white',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                    minWidth: '200px'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = '#0070f3';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,112,243,0.2)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = '#ddd';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{col.emoji}</span>
-                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{col.name}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '32px' }}>
-                    {col.description}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* LOGISTICS-BASED COLLECTIONS TABS */}
