@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -16,6 +16,7 @@ import Link from 'next/link';
 
 export default function SellerDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -234,6 +235,15 @@ export default function SellerDashboard() {
       });
     }
   }, [userData, showProfileModal]);
+
+  // Auto-open profile modal if redirected from signup
+  useEffect(() => {
+    if (userData && searchParams.get('setupProfile') === 'true' && !userData.isProfileComplete) {
+      setShowProfileModal(true);
+      // Remove the query parameter from URL
+      router.replace('/seller-dashboard');
+    }
+  }, [userData, searchParams, router]);
 
   // Calculate trip countdown (Feature 9)
   const getTripCountdown = () => {
