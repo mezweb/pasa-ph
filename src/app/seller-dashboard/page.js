@@ -249,10 +249,13 @@ export default function SellerDashboard() {
     }
   }, [userData, showProfileModal]);
 
-  // Auto-open profile modal if profile is incomplete
+  // Auto-open profile modal if profile is less than 80% complete
   useEffect(() => {
-    if (userData && !userData.isProfileComplete) {
-      setShowProfileModal(true);
+    if (userData) {
+      const completionPercentage = calculateProfileCompletion();
+      if (completionPercentage < 80) {
+        setShowProfileModal(true);
+      }
     }
   }, [userData]);
 
