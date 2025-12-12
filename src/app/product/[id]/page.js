@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
-import { POPULAR_PRODUCTS } from '../../../lib/products';
 import { useCart } from '../../../context/CartContext';
 import Link from 'next/link';
+import { db } from '../../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -22,13 +23,45 @@ export default function ProductDetailPage() {
   const imageRef = useRef(null);
 
   useEffect(() => {
-    if (id) {
-      const foundProduct = POPULAR_PRODUCTS.find(p => p.id === id);
-      if (foundProduct) {
-        setProduct(foundProduct);
+    const fetchProduct = async () => {
+      if (!id) return;
+
+      try {
+        const docRef = doc(db, "requests", id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProduct({
+            id: docSnap.id,
+            title: data.title || '',
+            category: data.category || 'Other',
+            image: data.image || 'https://placehold.co/400x400?text=No+Image',
+            images: data.images || [data.image || 'https://placehold.co/400x400?text=No+Image'],
+            from: data.from || '',
+            to: data.to || '',
+            price: data.price || 0,
+            description: data.description || 'No description available.',
+            quantity: data.quantity || 1,
+            userId: data.userId || '',
+            userName: data.userName || 'Anonymous',
+            userPhoto: data.userPhoto || 'https://placehold.co/32x32?text=U',
+            createdAt: data.createdAt || null,
+            isHot: data.isHot || false,
+            estimatedDelivery: data.estimatedDelivery || '7-10 Days',
+            topSellers: data.topSellers || [],
+            requests: data.requests || 0,
+            sellers: data.sellers || 0
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
+
+    fetchProduct();
   }, [id]);
 
   // Pinch-to-zoom handlers for mobile

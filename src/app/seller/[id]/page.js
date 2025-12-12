@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
-import { POPULAR_PRODUCTS } from '@/lib/products';
 
 // --- MOCK DATA GENERATOR ---
 const getSellerProfile = (id) => {
@@ -75,6 +74,9 @@ export default function SellerProfilePage() {
   const seller = getSellerProfile(sellerName);
 
   const [user, setUser] = useState(null);
+  const [sellerData, setSellerData] = useState(null);
+  const [sellerItems, setSellerItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [newRating, setNewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -95,6 +97,50 @@ export default function SellerProfilePage() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Load seller data from Firestore
+  useEffect(() => {
+    const fetchSellerData = async () => {
+      try {
+        // Query users collection to find seller by display name
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('displayName', '==', sellerName)
+        );
+        const userSnapshot = await getDocs(usersQuery);
+
+        if (!userSnapshot.empty) {
+          const sellerDoc = userSnapshot.docs[0];
+          setSellerData({ uid: sellerDoc.id, ...sellerDoc.data() });
+        }
+      } catch (error) {
+        console.error('Error fetching seller data:', error);
+      }
+    };
+
+    fetchSellerData();
+  }, [sellerName]);
+
+  // Load seller's items from Firestore
+  useEffect(() => {
+    if (!sellerData?.uid) return;
+
+    const itemsQuery = query(
+      collection(db, 'requests'),
+      where('userId', '==', sellerData.uid)
+    );
+
+    const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSellerItems(items);
+      setLoadingItems(false);
+    });
+
+    return () => unsubscribe();
+  }, [sellerData]);
 
   // Load reviews
   useEffect(() => {
@@ -265,10 +311,6 @@ export default function SellerProfilePage() {
     return sorted;
   };
 
-  const getProductLink = (title) => {
-    const found = POPULAR_PRODUCTS.find(p => p.title === title);
-    return found ? `/product/${found.id}` : '#';
-  };
 
   // Calculate average rating from actual reviews
   const calculateAverageRating = () => {
@@ -536,6 +578,112 @@ export default function SellerProfilePage() {
       {/* CONTENT BODY */}
       <div style={{ background: '#f8f9fa', minHeight: '60vh', padding: '40px 0' }}>
         <div className="container" style={{ maxWidth: '900px' }}>
+
+            {/* SELLER'S ITEMS SECTION */}
+            <div style={{ marginBottom: '60px' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', fontWeight: '800' }}>
+                  📦 Items Listed ({sellerItems.length})
+                </h2>
+
+                {loadingItems ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    Loading items...
+                  </div>
+                ) : sellerItems.length === 0 ? (
+                  <div style={{ background: 'white', borderRadius: '12px', padding: '40px', textAlign: 'center', border: '1px solid #eaeaea' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '10px' }}>📭</div>
+                    <p style={{ color: '#666', margin: 0 }}>No items listed yet</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                    {sellerItems.map(item => (
+                      <Link href={`/product/${item.id}`} key={item.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <div style={{
+                          border: '1px solid #eaeaea',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          background: 'white',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-5px)';
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}>
+                          {/* Item Image */}
+                          <div style={{ position: 'relative', paddingTop: '100%', background: '#f5f5f5' }}>
+                            <img
+                              src={item.image || 'https://placehold.co/400x400?text=No+Image'}
+                              alt={item.title}
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </div>
+
+                          {/* Item Info */}
+                          <div style={{ padding: '15px' }}>
+                            <h3 style={{
+                              fontSize: '1rem',
+                              fontWeight: '700',
+                              margin: '0 0 8px 0',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {item.title}
+                            </h3>
+
+                            <div style={{ display: 'flex', gap: '5px', marginBottom: '8px', fontSize: '0.85rem', color: '#666' }}>
+                              <span>📍 {item.from}</span>
+                              <span>→</span>
+                              <span>{item.to}</span>
+                            </div>
+
+                            <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#2e7d32', marginBottom: '8px' }}>
+                              ${item.price}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                background: '#e3f2fd',
+                                color: '#0070f3',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                {item.category || 'Other'}
+                              </span>
+                              {item.quantity && (
+                                <span style={{
+                                  background: '#f3e5f5',
+                                  color: '#7b1fa2',
+                                  padding: '3px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600'
+                                }}>
+                                  Qty: {item.quantity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+            </div>
 
             {/* REVIEWS SECTION */}
             <div style={{ marginTop: '60px' }}>
