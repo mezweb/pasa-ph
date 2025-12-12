@@ -104,8 +104,8 @@ export default function SellerDashboard() {
   const weeklyEarnings = [1200, 2500, 1800, 3200, 2800, 4100, 3500];
   const totalBalance = 15800;
 
-  // New orders count for badge
-  const newOrdersCount = 3;
+  // New orders count for badge (dynamic from actual orders)
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
 
   // Exchange rates
   const exchangeRates = {
