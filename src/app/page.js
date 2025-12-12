@@ -43,7 +43,6 @@ export default function Home() {
   const { addToCart, toggleWishlist, isInWishlist, viewMode } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState('items'); // 'items' or 'travelers'
-  const [activeCollection, setActiveCollection] = useState('viral'); // 'viral', 'preorder', 'onhand'
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
@@ -626,50 +625,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* DEAL OF THE DAY BANNER */}
-      <div style={{ background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', padding: '20px', borderBottom: '2px solid #c92a2a' }}>
-        <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '250px' }}>
-              <div style={{ fontSize: '2.5rem' }}>⚡</div>
-              <div>
-                <div style={{ color: 'white', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                  Deal of the Day
-                </div>
-                <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: '800', margin: 0 }}>
-                  Premium Confectionery - Only ₱75 today!
-                </h3>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px 16px', borderRadius: '8px', textAlign: 'center', backdropFilter: 'blur(10px)' }}>
-                <div style={{ color: 'white', fontSize: '1.5rem', fontWeight: '900', lineHeight: 1 }}>40%</div>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.7rem', marginTop: '2px' }}>OFF</div>
-              </div>
-              <Link href="/product/p1" style={{ textDecoration: 'none' }}>
-                <button style={{
-                  background: 'white',
-                  color: '#ee5a6f',
-                  border: 'none',
-                  padding: '10px 24px',
-                  borderRadius: '30px',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  transition: 'transform 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  Grab Deal →
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* SHOP SECTION */}
       <div id="shop" className="container" style={{ padding: '40px 20px' }}>
         
@@ -803,86 +758,6 @@ export default function Home() {
             </select>
           </div>
 
-        </div>
-
-        {/* LOGISTICS-BASED COLLECTIONS TABS */}
-        <div style={{ marginBottom: '30px' }}>
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px', borderBottom: '2px solid #eee' }}>
-            <button
-              onClick={() => {
-                setActiveCollection('viral');
-                setCountryFilter('Japan');
-                setCategory('All');
-              }}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeCollection === 'viral' ? '#0070f3' : '#f5f5f5',
-                color: activeCollection === 'viral' ? 'white' : '#333',
-                fontWeight: '700',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}
-            >
-              🔥 Viral Tokyo Snacks
-            </button>
-            <button
-              onClick={() => {
-                setActiveCollection('preorder');
-                setCategory('All');
-                setCountryFilter('All');
-              }}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeCollection === 'preorder' ? '#0070f3' : '#f5f5f5',
-                color: activeCollection === 'preorder' ? 'white' : '#333',
-                fontWeight: '700',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}
-            >
-              ⏰ Arriving Next Week (Pre-order)
-            </button>
-            <button
-              onClick={() => {
-                setActiveCollection('onhand');
-                setCategory('All');
-                setCountryFilter('All');
-              }}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeCollection === 'onhand' ? '#0070f3' : '#f5f5f5',
-                color: activeCollection === 'onhand' ? 'white' : '#333',
-                fontWeight: '700',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}
-            >
-              ✅ Verified On-Hand (No Waiting)
-            </button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Collection</h3>
-              <h2 style={{ margin: '5px 0 0', fontSize: '1.8rem', fontWeight: '800' }}>
-                {activeCollection === 'viral' && '🔥 Viral Tokyo Snacks'}
-                {activeCollection === 'preorder' && '⏰ Arriving Next Week (Pre-order)'}
-                {activeCollection === 'onhand' && '✅ Verified On-Hand (No Waiting)'}
-              </h2>
-            </div>
-            <Link href="/shop" style={{ fontSize: '0.9rem', color: '#0070f3', fontWeight: '600' }}>View All &rarr;</Link>
-          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px', marginBottom: '60px' }}>
