@@ -50,6 +50,8 @@ export default function OnboardingPage() {
     description: '',
     image: ''
   });
+  const [itemImageFile, setItemImageFile] = useState(null);
+  const [itemImagePreview, setItemImagePreview] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -133,6 +135,35 @@ export default function OnboardingPage() {
     }));
   };
 
+  // Handle item image file selection
+  const handleItemImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPG or PNG)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB');
+      return;
+    }
+
+    setItemImageFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setItemImagePreview(reader.result);
+      // Also set in newItem for consistency
+      setNewItem(prev => ({ ...prev, image: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddItem = () => {
     if (newItem.title && newItem.price) {
       setFormData(prev => ({
@@ -150,6 +181,8 @@ export default function OnboardingPage() {
         description: '',
         image: ''
       });
+      setItemImageFile(null);
+      setItemImagePreview('');
     }
   };
 
@@ -555,15 +588,71 @@ export default function OnboardingPage() {
                       </div>
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '0.9rem' }}>Image URL (optional)</label>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '0.9rem' }}>Item Image (optional)</label>
                       <input
-                        name="image"
-                        type="text"
-                        placeholder="https://..."
-                        style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem' }}
-                        value={newItem.image}
-                        onChange={handleItemChange}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleItemImageChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #ccc',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          cursor: 'pointer'
+                        }}
                       />
+                      <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
+                        Upload JPG or PNG (max 5MB)
+                      </p>
+
+                      {/* Image Preview */}
+                      {itemImagePreview && (
+                        <div style={{ marginTop: '10px' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px', color: '#0070f3' }}>Preview:</div>
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <img
+                              src={itemImagePreview}
+                              alt="Preview"
+                              style={{
+                                maxWidth: '150px',
+                                maxHeight: '150px',
+                                borderRadius: '6px',
+                                border: '2px solid #0070f3',
+                                objectFit: 'cover'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setItemImageFile(null);
+                                setItemImagePreview('');
+                                setNewItem(prev => ({ ...prev, image: '' }));
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Remove image"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={handleAddItem}
