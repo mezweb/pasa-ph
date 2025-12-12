@@ -76,6 +76,8 @@ export default function SellerDashboard() {
     quantity: 1,
     description: ''
   });
+  const [itemImageFile, setItemImageFile] = useState(null);
+  const [itemImagePreview, setItemImagePreview] = useState('');
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   // Profile Completion Modal state
@@ -635,6 +637,33 @@ export default function SellerDashboard() {
     }));
   };
 
+  // Handle item image file selection
+  const handleItemImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPG or PNG)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB');
+      return;
+    }
+
+    setItemImageFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setItemImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle List Item
   const handleListItem = async (e) => {
     e.preventDefault();
@@ -645,8 +674,18 @@ export default function SellerDashboard() {
 
     setIsSubmittingItem(true);
     try {
-      // Use placeholder if no image link provided
-      const finalImage = newItem.image || `https://placehold.co/600x400/e3f2fd/0070f3?text=${encodeURIComponent(newItem.title)}`;
+      // Convert image file to base64 if provided, otherwise use placeholder
+      let finalImage = `https://placehold.co/600x400/e3f2fd/0070f3?text=${encodeURIComponent(newItem.title)}`;
+
+      if (itemImageFile) {
+        // Convert file to base64
+        const reader = new FileReader();
+        finalImage = await new Promise((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(itemImageFile);
+        });
+      }
 
       await addDoc(collection(db, "requests"), {
         ...newItem,
@@ -670,6 +709,8 @@ export default function SellerDashboard() {
         quantity: 1,
         description: ''
       });
+      setItemImageFile(null);
+      setItemImagePreview('');
       setIsListItemModalOpen(false);
       alert('✅ Item listed successfully! It will appear in the marketplace.');
     } catch (error) {
@@ -1934,23 +1975,70 @@ export default function SellerDashboard() {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Image URL (Optional)</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Item Image (Optional)</label>
             <input
-              type="url"
-              value={newItem.image}
-              onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png"
+              onChange={handleItemImageChange}
               style={{
                 width: '100%',
                 padding: '12px',
                 border: '1px solid #ddd',
                 borderRadius: '8px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                cursor: 'pointer'
               }}
-              placeholder="https://example.com/image.jpg"
             />
             <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
-              Leave blank to auto-generate a placeholder image
+              Upload a JPG or PNG image (max 5MB). Leave empty for a placeholder image.
             </p>
+
+            {/* Image Preview */}
+            {itemImagePreview && (
+              <div style={{ marginTop: '15px' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px', color: '#0070f3' }}>Preview:</div>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <img
+                    src={itemImagePreview}
+                    alt="Preview"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '200px',
+                      borderRadius: '8px',
+                      border: '2px solid #0070f3',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setItemImageFile(null);
+                      setItemImagePreview('');
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: '#ff4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
