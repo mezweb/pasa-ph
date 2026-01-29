@@ -361,32 +361,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* LIVE TRAVELER TICKER */}
-      <div style={{ background: '#fff3cd', borderBottom: '1px solid #ffc107', padding: '12px 20px', overflow: 'hidden' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>✈️</span>
-            <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#856404' }}>
-              5 travelers arriving from Japan this week
-            </span>
-          </div>
-          <div style={{ height: '20px', width: '1px', background: '#ffc107' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🇺🇸</span>
-            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
-              3 from USA next week
-            </span>
-          </div>
-          <div style={{ height: '20px', width: '1px', background: '#ffc107' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🇰🇷</span>
-            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
-              8 from South Korea this month
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* --- SEARCH BAR --- */}
       <div style={{ background: '#f8f9fa', padding: '40px 20px', borderBottom: '1px solid #eaeaea' }}>
         <div className="container" style={{ maxWidth: '800px', textAlign: 'center' }}>
